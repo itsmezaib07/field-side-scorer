@@ -181,11 +181,11 @@ function eventLabel(e: any, match: any) {
       return <span>🔁 Sub · {team} — {e.sub_in?.name ?? "?"} ⇆ {e.player?.name ?? "?"}</span>;
     case "foul": {
       const card =
-        e.card_type === "yellow" ? <> + <span className="text-yellow-600">🟨 Yellow</span>{e.card_player && e.card_player.name !== e.player?.name ? ` (${e.card_player.name})` : ""}</>
-        : e.card_type === "red" ? <> + <span className="text-red-600">🟥 Red</span>{e.card_player && e.card_player.name !== e.player?.name ? ` (${e.card_player.name})` : ""}</>
+        e.card_type === "yellow" ? <> + <span className="inline-flex items-center gap-1 text-yellow-600"><RectangleVertical className="h-3.5 w-3.5 fill-yellow-500 text-yellow-600" />Yellow</span>{e.card_player && e.card_player.name !== e.player?.name ? ` (${e.card_player.name})` : ""}</>
+        : e.card_type === "red" ? <> + <span className="inline-flex items-center gap-1 text-red-600"><RectangleVertical className="h-3.5 w-3.5 fill-red-500 text-red-600" />Red</span>{e.card_player && e.card_player.name !== e.player?.name ? ` (${e.card_player.name})` : ""}</>
         : null;
       const outcome = foulOutcomeLabel(e.foul_outcome);
-      return <span>🨐 <b>Foul</b> · {team} — {e.player?.name ?? "?"}{card}{outcome ? <> → {outcome}</> : null}</span>;
+      return <span className="inline-flex items-center gap-1 flex-wrap"><Flag className="h-4 w-4 text-muted-foreground" /><b>Foul</b> · {team} — {e.player?.name ?? "?"}{card}{outcome ? <> → {outcome}</> : null}</span>;
     }
     case "kickoff": return <span>▶ Kick off</span>;
     case "halftime": return <span>⏸ Half time</span>;
