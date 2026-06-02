@@ -40,7 +40,7 @@ function MatchView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("match_events")
-        .select("*, player:players!match_events_player_id_fkey(name, jersey_number), assist:players!match_events_assist_player_id_fkey(name), sub_in:players!match_events_sub_in_player_id_fkey(name, jersey_number)")
+        .select("*, player:players!match_events_player_id_fkey(name, jersey_number), assist:players!match_events_assist_player_id_fkey(name), sub_in:players!match_events_sub_in_player_id_fkey(name, jersey_number), card_player:players!match_events_card_player_id_fkey(name, jersey_number)")
         .eq("match_id", matchId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -173,12 +173,31 @@ function eventLabel(e: any, match: any) {
       return <span>🟥 Red · {team} — {e.player?.name ?? "?"}</span>;
     case "substitution":
       return <span>🔁 Sub · {team} — {e.sub_in?.name ?? "?"} ⇆ {e.player?.name ?? "?"}</span>;
+    case "foul": {
+      const card =
+        e.card_type === "yellow" ? <> + <span className="text-yellow-600">🟨 Yellow</span>{e.card_player && e.card_player.name !== e.player?.name ? ` (${e.card_player.name})` : ""}</>
+        : e.card_type === "red" ? <> + <span className="text-red-600">🟥 Red</span>{e.card_player && e.card_player.name !== e.player?.name ? ` (${e.card_player.name})` : ""}</>
+        : null;
+      const outcome = foulOutcomeLabel(e.foul_outcome);
+      return <span>🨐 <b>Foul</b> · {team} — {e.player?.name ?? "?"}{card}{outcome ? <> → {outcome}</> : null}</span>;
+    }
     case "kickoff": return <span>▶ Kick off</span>;
     case "halftime": return <span>⏸ Half time</span>;
     case "second_half": return <span>▶ Second half</span>;
     case "fulltime": return <span>⏹ Full time</span>;
     case "pause": return <span>⏸ Paused</span>;
     case "resume": return <span>▶ Resumed</span>;
+  }
+}
+
+function foulOutcomeLabel(o: string | null | undefined) {
+  switch (o) {
+    case "direct_free_kick": return "Direct Free Kick";
+    case "indirect_free_kick": return "Indirect Free Kick";
+    case "penalty": return "Penalty";
+    case "advantage": return "Advantage Played";
+    case "no_action": return "No Further Action";
+    default: return null;
   }
 }
 
@@ -317,7 +336,7 @@ function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
     await log({ type: "fulltime" });
   };
 
-  const [event, setEvent] = useState<null | "goal" | "yellow_card" | "red_card" | "substitution">(null);
+  const [event, setEvent] = useState<null | "goal" | "yellow_card" | "red_card" | "substitution" | "foul">(null);
 
   if (match.status === "finished") {
     return <div className="rounded-xl border bg-card p-3 text-center text-sm text-muted-foreground">Match finished.</div>;
@@ -352,9 +371,10 @@ function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
       {(match.status === "first_half" || match.status === "second_half" || match.status === "paused" || match.status === "halftime") && (
         <div className="grid grid-cols-2 gap-2">
           <Button onClick={() => setEvent("goal")} className="h-14 text-base bg-primary"><GoalIcon className="h-5 w-5 mr-1" />Goal</Button>
+          <Button onClick={() => setEvent("foul")} variant="outline" className="h-14 text-base"><Flag className="h-5 w-5 mr-1" />Foul</Button>
           <Button onClick={() => setEvent("yellow_card")} variant="outline" className="h-14 text-base"><RectangleVertical className="h-5 w-5 mr-1 text-yellow-500" />Yellow</Button>
           <Button onClick={() => setEvent("red_card")} variant="outline" className="h-14 text-base"><RectangleVertical className="h-5 w-5 mr-1 text-red-600" />Red</Button>
-          <Button onClick={() => setEvent("substitution")} variant="outline" className="h-14 text-base"><ArrowLeftRight className="h-5 w-5 mr-1" />Sub</Button>
+          <Button onClick={() => setEvent("substitution")} variant="outline" className="h-14 text-base col-span-2"><ArrowLeftRight className="h-5 w-5 mr-1" />Sub</Button>
         </div>
       )}
 
