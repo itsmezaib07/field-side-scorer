@@ -11,6 +11,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AuthProvider, useAuth } from "@/lib/auth";
+import { Toaster } from "@/components/ui/sonner";
+import { Home, Users, Trophy, LogOut, LogIn } from "lucide-react";
 
 function NotFoundComponent() {
   return (
@@ -118,8 +121,51 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <AuthProvider>
+        <AppShell />
+        <Toaster position="top-center" />
+      </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppShell() {
+  const { user, signOut } = useAuth();
+  return (
+    <div className="min-h-screen flex flex-col bg-background pb-20">
+      <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg">
+            <Trophy className="h-5 w-5 text-primary" />
+            <span>MatchPad</span>
+          </Link>
+          {user ? (
+            <button onClick={() => signOut()} className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+              <LogOut className="h-4 w-4" /> Sign out
+            </button>
+          ) : (
+            <Link to="/auth" className="text-sm text-primary inline-flex items-center gap-1">
+              <LogIn className="h-4 w-4" /> Sign in
+            </Link>
+          )}
+        </div>
+      </header>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-4">
+        <Outlet />
+      </main>
+      <nav className="fixed bottom-0 inset-x-0 z-40 border-t bg-card">
+        <div className="mx-auto max-w-3xl grid grid-cols-3 text-xs">
+          <Link to="/" className="flex flex-col items-center gap-1 py-3 text-muted-foreground [&.active]:text-primary" activeOptions={{ exact: true }} activeProps={{ className: "active" }}>
+            <Home className="h-5 w-5" /> Home
+          </Link>
+          <Link to="/teams" className="flex flex-col items-center gap-1 py-3 text-muted-foreground [&.active]:text-primary" activeProps={{ className: "active" }}>
+            <Users className="h-5 w-5" /> Teams
+          </Link>
+          <Link to="/tournaments" className="flex flex-col items-center gap-1 py-3 text-muted-foreground [&.active]:text-primary" activeProps={{ className: "active" }}>
+            <Trophy className="h-5 w-5" /> Tournaments
+          </Link>
+        </div>
+      </nav>
+    </div>
   );
 }
