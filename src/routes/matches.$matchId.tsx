@@ -250,11 +250,14 @@ function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
   };
 
   const start = async () => {
+    const now = new Date().toISOString();
     const { error } = await supabase.from("matches").update({
       status: "first_half",
       current_half: 1,
-      timer_started_at: new Date().toISOString(),
+      timer_started_at: now,
       accumulated_seconds: 0,
+      actual_started_at: now,
+      started_by_user_id: (await supabase.auth.getUser()).data.user?.id ?? null,
     }).eq("id", matchId);
     if (error) return toast.error(error.message);
     await log({ type: "kickoff" });
