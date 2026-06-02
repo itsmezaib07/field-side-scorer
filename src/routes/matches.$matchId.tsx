@@ -99,8 +99,10 @@ function MatchView() {
         </div>
       </div>
 
-      {isScorer && <ScoringPanel match={match} elapsed={elapsed} />}
+      {isScorer && <ScoringPanel match={match} elapsed={elapsed} events={events ?? []} />}
       {isAdmin && <AdminPanel match={match} />}
+
+      {match.status === "finished" && <MatchSummary match={match} />}
 
       <section>
         <h2 className="font-semibold mb-2">Timeline</h2>
@@ -263,12 +265,36 @@ function ScorersManager({ matchId }: { matchId: string }) {
   );
 }
 
-function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
+function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number; events: any[] }) {
   const matchId = match.id;
   const minute = getMinute(elapsed);
-  const halfLimitSec = ((match.minutes_per_half ?? 45) + (match.extra_time_minutes_per_half ?? 0)) * 60;
-  const firstHalfReached = elapsed >= halfLimitSec;
-  const fullTimeReached = elapsed >= halfLimitSec * (match.number_of_halves ?? 2);
+
+  const baseMph = match.minutes_per_half ?? 45;
+  const firstHalfBaseSec = baseMph * 60 + (match.first_half_stoppage_seconds ?? 0);
+  const secondHalfBaseSec = ((match.second_half_minutes ?? baseMph) * 60) + (match.second_half_stoppage_seconds ?? 0);
+  const firstHalfReached = elapsed >= firstHalfBaseSec;
+  const fullTimeReached = elapsed >= firstHalfBaseSec + secondHalfBaseSec;
+
+  const currentHalfLimit = match.status === "second_half" || match.current_half === 2
+    ? firstHalfBaseSec + secondHalfBaseSec
+    : firstHalfBaseSec;
+  const secondsToEnd = currentHalfLimit - elapsed;
+  const showStoppage = (match.status === "first_half" || match.status === "second_half") && secondsToEnd <= 5 * 60;
+
+  // Smart suggestion: events in last 90s that often warrant stoppage
+  const recentSuggestion = (() => {
+    if (!showStoppage) return null;
+    const now = Date.now();
+    const recent = events.filter((e) => now - new Date(e.created_at).getTime() < 90_000);
+    const reasons: string[] = [];
+    if (recent.some((e) => e.type === "pause")) reasons.push("long pause");
+    if (recent.some((e) => e.type === "substitution")) reasons.push("substitution");
+    if (recent.some((e) => e.type === "foul" && e.card_type === "red")) reasons.push("red card");
+    if (recent.some((e) => e.type === "foul" && e.foul_outcome === "penalty")) reasons.push("penalty");
+    return reasons.length ? reasons.join(", ") : null;
+  })();
+
+  const [halftimePrompt, setHalftimePrompt] = useState(false);
 
   const log = async (payload: any) => {
     const { error } = await supabase.from("match_events").insert({ match_id: matchId, minute, ...payload });
@@ -291,13 +317,25 @@ function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
 
   const halftime = async () => {
     const acc = getElapsedSeconds(match);
+    // If ended before base first-half duration, ask about 2nd-half length first.
+    if (acc < baseMph * 60) {
+      setHalftimePrompt(true);
+      return;
+    }
+    await finishFirstHalf(acc, match.second_half_minutes ?? baseMph);
+  };
+
+  const finishFirstHalf = async (acc: number, secondHalfMin: number) => {
     const { error } = await supabase.from("matches").update({
       status: "halftime",
       timer_started_at: null,
       accumulated_seconds: acc,
+      first_half_actual_seconds: acc,
+      second_half_minutes: secondHalfMin,
     }).eq("id", matchId);
     if (error) return toast.error(error.message);
     await log({ type: "halftime" });
+    setHalftimePrompt(false);
   };
 
   const secondHalf = async () => {
@@ -334,13 +372,25 @@ function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
   const fulltime = async () => {
     if (!confirm("End the match?")) return;
     const acc = getElapsedSeconds(match);
+    const firstActual = match.first_half_actual_seconds ?? Math.min(acc, firstHalfBaseSec);
     const { error } = await supabase.from("matches").update({
       status: "finished",
       timer_started_at: null,
       accumulated_seconds: acc,
+      second_half_actual_seconds: Math.max(0, acc - firstActual),
     }).eq("id", matchId);
     if (error) return toast.error(error.message);
     await log({ type: "fulltime" });
+  };
+
+  const addStoppage = async (extraMinutes: number) => {
+    const seconds = Math.round(extraMinutes * 60);
+    if (!seconds) return;
+    const field = match.current_half === 2 ? "second_half_stoppage_seconds" : "first_half_stoppage_seconds";
+    const current = match[field] ?? 0;
+    const { error } = await supabase.from("matches").update({ [field]: current + seconds }).eq("id", matchId);
+    if (error) return toast.error(error.message);
+    toast.success(`Added +${extraMinutes}' stoppage time`);
   };
 
   const [event, setEvent] = useState<null | "goal" | "yellow_card" | "red_card" | "substitution" | "foul">(null);
@@ -351,6 +401,30 @@ function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
 
   return (
     <div className="rounded-xl border bg-card p-3 space-y-3">
+      {showStoppage && (
+        <div className="rounded-lg border border-dashed bg-muted/40 p-2 space-y-2">
+          <div className="text-xs font-semibold flex items-center justify-between">
+            <span>Add stoppage time?</span>
+            <span className="text-muted-foreground">
+              Current: +{Math.round((match.current_half === 2 ? match.second_half_stoppage_seconds : match.first_half_stoppage_seconds) / 60) || 0}'
+            </span>
+          </div>
+          {recentSuggestion && (
+            <div className="text-[11px] text-muted-foreground">Suggested due to: {recentSuggestion}</div>
+          )}
+          <div className="flex flex-wrap gap-1">
+            {[1, 2, 3, 4, 5].map((m) => (
+              <Button key={m} size="sm" variant="outline" onClick={() => addStoppage(m)}>+{m}'</Button>
+            ))}
+            <Button size="sm" variant="ghost" onClick={() => {
+              const v = prompt("Custom stoppage minutes:");
+              const n = Number(v);
+              if (n > 0) addStoppage(n);
+            }}>Custom</Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {match.status === "scheduled" && (
           <Button onClick={start} className="flex-1"><Play className="h-4 w-4 mr-1" />Kick off</Button>
@@ -391,7 +465,79 @@ function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
         minute={minute}
         onClose={() => setEvent(null)}
       />
+
+      <HalftimePrompt
+        open={halftimePrompt}
+        onOpenChange={setHalftimePrompt}
+        elapsedSec={getElapsedSeconds(match)}
+        baseMph={baseMph}
+        onConfirm={(secondHalfMin) => finishFirstHalf(getElapsedSeconds(match), secondHalfMin)}
+      />
     </div>
+  );
+}
+
+function HalftimePrompt({ open, onOpenChange, elapsedSec, baseMph, onConfirm }:
+  { open: boolean; onOpenChange: (o: boolean) => void; elapsedSec: number; baseMph: number; onConfirm: (m: number) => void }) {
+  const mirrored = Math.max(1, Math.round(elapsedSec / 60));
+  const [mode, setMode] = useState<"mirror" | "original" | "custom">("mirror");
+  const [custom, setCustom] = useState(String(baseMph));
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>First half ended early</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 text-sm">
+          <p className="text-muted-foreground text-xs">
+            First half lasted {mirrored} min (configured {baseMph}). Choose second-half duration:
+          </p>
+          <button type="button" onClick={() => setMode("mirror")}
+            className={`w-full rounded-md border p-2 text-left ${mode === "mirror" ? "border-primary bg-primary/10 text-primary" : ""}`}>
+            Mirror first half ({mirrored} min)
+          </button>
+          <button type="button" onClick={() => setMode("original")}
+            className={`w-full rounded-md border p-2 text-left ${mode === "original" ? "border-primary bg-primary/10 text-primary" : ""}`}>
+            Use original configured ({baseMph} min)
+          </button>
+          <button type="button" onClick={() => setMode("custom")}
+            className={`w-full rounded-md border p-2 text-left ${mode === "custom" ? "border-primary bg-primary/10 text-primary" : ""}`}>
+            Custom
+          </button>
+          {mode === "custom" && (
+            <input type="number" min={1} value={custom} onChange={(e) => setCustom(e.target.value)}
+              className="w-full rounded-md border bg-background px-2 py-2 text-sm" />
+          )}
+          <Button className="w-full" onClick={() => {
+            const m = mode === "mirror" ? mirrored : mode === "original" ? baseMph : Math.max(1, Number(custom) || baseMph);
+            onConfirm(m);
+          }}>Confirm half time</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MatchSummary({ match }: { match: any }) {
+  const baseMph = match.minutes_per_half ?? 45;
+  const halves = match.number_of_halves ?? 2;
+  const fmt = (sec?: number | null) => sec == null ? "—" : `${Math.floor(sec / 60)}'${String(sec % 60).padStart(2, "0")}`;
+  return (
+    <section className="rounded-xl border bg-card p-3 space-y-2">
+      <h2 className="font-semibold">Match report</h2>
+      <dl className="grid grid-cols-2 gap-y-1 text-sm">
+        <dt className="text-muted-foreground">Scheduled duration</dt>
+        <dd>{Array.from({ length: halves }).map(() => baseMph).join(" + ")} min</dd>
+        <dt className="text-muted-foreground">1st half actual</dt>
+        <dd>{fmt(match.first_half_actual_seconds)}</dd>
+        <dt className="text-muted-foreground">2nd half actual</dt>
+        <dd>{fmt(match.second_half_actual_seconds)}</dd>
+        <dt className="text-muted-foreground">1st half stoppage</dt>
+        <dd>+{Math.round((match.first_half_stoppage_seconds ?? 0) / 60)}'</dd>
+        <dt className="text-muted-foreground">2nd half stoppage</dt>
+        <dd>+{Math.round((match.second_half_stoppage_seconds ?? 0) / 60)}'</dd>
+      </dl>
+    </section>
   );
 }
 
