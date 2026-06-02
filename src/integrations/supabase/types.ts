@@ -17,8 +17,11 @@ export type Database = {
       match_events: {
         Row: {
           assist_player_id: string | null
+          card_player_id: string | null
+          card_type: string | null
           created_at: string
           created_by: string | null
+          foul_outcome: string | null
           id: string
           match_id: string
           minute: number | null
@@ -30,8 +33,11 @@ export type Database = {
         }
         Insert: {
           assist_player_id?: string | null
+          card_player_id?: string | null
+          card_type?: string | null
           created_at?: string
           created_by?: string | null
+          foul_outcome?: string | null
           id?: string
           match_id: string
           minute?: number | null
@@ -43,8 +49,11 @@ export type Database = {
         }
         Update: {
           assist_player_id?: string | null
+          card_player_id?: string | null
+          card_type?: string | null
           created_at?: string
           created_by?: string | null
+          foul_outcome?: string | null
           id?: string
           match_id?: string
           minute?: number | null
@@ -58,6 +67,13 @@ export type Database = {
           {
             foreignKeyName: "match_events_assist_player_id_fkey"
             columns: ["assist_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_card_player_id_fkey"
+            columns: ["card_player_id"]
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["id"]
@@ -413,6 +429,7 @@ export type Database = {
         | "fulltime"
         | "pause"
         | "resume"
+        | "foul"
       match_status:
         | "scheduled"
         | "first_half"
@@ -560,6 +577,7 @@ export const Constants = {
         "fulltime",
         "pause",
         "resume",
+        "foul",
       ],
       match_status: [
         "scheduled",

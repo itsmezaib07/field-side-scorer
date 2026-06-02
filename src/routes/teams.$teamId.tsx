@@ -46,15 +46,15 @@ function TeamDetail() {
     queryFn: async () => {
       const { data: ev } = await supabase
         .from("match_events")
-        .select("type, player_id, assist_player_id, match_id, team_id")
+        .select("type, player_id, assist_player_id, match_id, team_id, card_type, card_player_id")
         .eq("team_id", teamId);
       const { data: sq } = await supabase
         .from("match_squads")
         .select("player_id, match_id")
         .eq("team_id", teamId);
-      const map = new Map<string, { goals: number; assists: number; yc: number; rc: number; matches: number }>();
+      const map = new Map<string, { goals: number; assists: number; yc: number; rc: number; fouls: number; matches: number }>();
       const get = (id: string) => {
-        if (!map.has(id)) map.set(id, { goals: 0, assists: 0, yc: 0, rc: 0, matches: 0 });
+        if (!map.has(id)) map.set(id, { goals: 0, assists: 0, yc: 0, rc: 0, fouls: 0, matches: 0 });
         return map.get(id)!;
       };
       for (const e of ev ?? []) {
@@ -63,8 +63,15 @@ function TeamDetail() {
           if (e.type === "goal") s.goals++;
           if (e.type === "yellow_card") s.yc++;
           if (e.type === "red_card") s.rc++;
+          if (e.type === "foul") s.fouls++;
         }
         if (e.type === "goal" && e.assist_player_id) get(e.assist_player_id).assists++;
+        const anyE = e as any;
+        if (e.type === "foul" && anyE.card_player_id) {
+          const s = get(anyE.card_player_id);
+          if (anyE.card_type === "yellow") s.yc++;
+          if (anyE.card_type === "red") s.rc++;
+        }
       }
       const playerMatchSet = new Map<string, Set<string>>();
       for (const s of sq ?? []) {
