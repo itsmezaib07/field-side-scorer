@@ -161,6 +161,7 @@ export type Database = {
       matches: {
         Row: {
           accumulated_seconds: number
+          actual_started_at: string | null
           away_score: number
           away_team_id: string
           created_at: string
@@ -169,12 +170,14 @@ export type Database = {
           home_team_id: string
           id: string
           scheduled_at: string | null
+          started_by_user_id: string | null
           status: Database["public"]["Enums"]["match_status"]
           timer_started_at: string | null
           tournament_id: string
         }
         Insert: {
           accumulated_seconds?: number
+          actual_started_at?: string | null
           away_score?: number
           away_team_id: string
           created_at?: string
@@ -183,12 +186,14 @@ export type Database = {
           home_team_id: string
           id?: string
           scheduled_at?: string | null
+          started_by_user_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           timer_started_at?: string | null
           tournament_id: string
         }
         Update: {
           accumulated_seconds?: number
+          actual_started_at?: string | null
           away_score?: number
           away_team_id?: string
           created_at?: string
@@ -197,6 +202,7 @@ export type Database = {
           home_team_id?: string
           id?: string
           scheduled_at?: string | null
+          started_by_user_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           timer_started_at?: string | null
           tournament_id?: string
