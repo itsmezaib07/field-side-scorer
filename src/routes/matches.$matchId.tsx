@@ -112,8 +112,11 @@ function MatchView() {
                       if (!confirm("Delete this event?")) return;
                       // If goal, decrement score
                       if (e.type === "goal") {
-                        const field = e.team_id === match.home_team_id ? "home_score" : "away_score";
-                        await supabase.from("matches").update({ [field]: Math.max(0, (match as any)[field] - 1) }).eq("id", matchId);
+                        if (e.team_id === match.home_team_id) {
+                          await supabase.from("matches").update({ home_score: Math.max(0, match.home_score - 1) }).eq("id", matchId);
+                        } else if (e.team_id === match.away_team_id) {
+                          await supabase.from("matches").update({ away_score: Math.max(0, match.away_score - 1) }).eq("id", matchId);
+                        }
                       }
                       const { error } = await supabase.from("match_events").delete().eq("id", e.id);
                       if (error) return toast.error(error.message);
@@ -395,10 +398,13 @@ function EventDialog({ kind, match, minute, onClose }: { kind: string | null; ma
       if (!playerId) return toast.error("Pick scorer");
       base.player_id = playerId;
       base.assist_player_id = assistId;
-      const field = teamId === match.home_team_id ? "home_score" : "away_score";
-      const newScore = (match[field] ?? 0) + 1;
-      const { error: e1 } = await supabase.from("matches").update({ [field]: newScore }).eq("id", match.id);
-      if (e1) return toast.error(e1.message);
+      if (teamId === match.home_team_id) {
+        const { error: e1 } = await supabase.from("matches").update({ home_score: (match.home_score ?? 0) + 1 }).eq("id", match.id);
+        if (e1) return toast.error(e1.message);
+      } else {
+        const { error: e1 } = await supabase.from("matches").update({ away_score: (match.away_score ?? 0) + 1 }).eq("id", match.id);
+        if (e1) return toast.error(e1.message);
+      }
     } else if (kind === "yellow_card" || kind === "red_card") {
       if (!playerId) return toast.error("Pick player");
       base.player_id = playerId;
