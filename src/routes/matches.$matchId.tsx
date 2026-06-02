@@ -93,6 +93,10 @@ function MatchView() {
           </div>
           <TeamBlock team={match.away_team} />
         </div>
+        <div className="mt-2 text-center text-[10px] uppercase opacity-80">
+          Match Duration: {Array.from({ length: match.number_of_halves ?? 2 }).map(() => match.minutes_per_half ?? 45).join(" + ")} Minutes
+          {match.extra_time_minutes_per_half ? ` (+${match.extra_time_minutes_per_half} extra/half)` : ""}
+        </div>
       </div>
 
       {isScorer && <ScoringPanel match={match} elapsed={elapsed} />}
@@ -262,6 +266,9 @@ function ScorersManager({ matchId }: { matchId: string }) {
 function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
   const matchId = match.id;
   const minute = getMinute(elapsed);
+  const halfLimitSec = ((match.minutes_per_half ?? 45) + (match.extra_time_minutes_per_half ?? 0)) * 60;
+  const firstHalfReached = elapsed >= halfLimitSec;
+  const fullTimeReached = elapsed >= halfLimitSec * (match.number_of_halves ?? 2);
 
   const log = async (payload: any) => {
     const { error } = await supabase.from("match_events").insert({ match_id: matchId, minute, ...payload });
@@ -351,7 +358,7 @@ function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
         {match.status === "first_half" && (
           <>
             <Button onClick={pause} variant="outline" className="flex-1"><Pause className="h-4 w-4 mr-1" />Pause</Button>
-            <Button onClick={halftime} className="flex-1"><Flag className="h-4 w-4 mr-1" />Half time</Button>
+            <Button onClick={halftime} disabled={!firstHalfReached} className="flex-1"><Flag className="h-4 w-4 mr-1" />Half time</Button>
           </>
         )}
         {match.status === "halftime" && (
@@ -360,7 +367,7 @@ function ScoringPanel({ match, elapsed }: { match: any; elapsed: number }) {
         {match.status === "second_half" && (
           <>
             <Button onClick={pause} variant="outline" className="flex-1"><Pause className="h-4 w-4 mr-1" />Pause</Button>
-            <Button onClick={fulltime} className="flex-1"><Square className="h-4 w-4 mr-1" />Full time</Button>
+            <Button onClick={fulltime} disabled={!fullTimeReached} className="flex-1"><Square className="h-4 w-4 mr-1" />Full time</Button>
           </>
         )}
         {match.status === "paused" && (

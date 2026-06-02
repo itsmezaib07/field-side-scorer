@@ -202,6 +202,9 @@ function NewMatchForm({ tournamentId, teams, onCreated }: { tournamentId: string
   const [home, setHome] = useState("");
   const [away, setAway] = useState("");
   const [when, setWhen] = useState("");
+  const [halves, setHalves] = useState(2);
+  const [mph, setMph] = useState(45);
+  const [extra, setExtra] = useState(0);
   if (teams.length < 2) return null;
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,9 +214,12 @@ function NewMatchForm({ tournamentId, teams, onCreated }: { tournamentId: string
       home_team_id: home,
       away_team_id: away,
       scheduled_at: when ? new Date(when).toISOString() : null,
+      number_of_halves: halves,
+      minutes_per_half: mph,
+      extra_time_minutes_per_half: extra,
     });
     if (error) return toast.error(error.message);
-    setOpen(false); setHome(""); setAway(""); setWhen("");
+    setOpen(false); setHome(""); setAway(""); setWhen(""); setHalves(2); setMph(45); setExtra(0);
     onCreated();
   };
   if (!open) return <Button size="sm" variant="outline" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Schedule match</Button>;
@@ -230,6 +236,28 @@ function NewMatchForm({ tournamentId, teams, onCreated }: { tournamentId: string
         </select>
       </div>
       <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="w-full rounded-md border bg-background px-2 py-2 text-sm" />
+      <div className="space-y-1">
+        <div className="text-xs text-muted-foreground">Match duration</div>
+        <div className="flex flex-wrap gap-1">
+          {[20, 25, 30, 35, 40, 45].map((m) => (
+            <button type="button" key={m} onClick={() => setMph(m)}
+              className={`rounded-md border px-2 py-1 text-xs ${mph === m ? "border-primary bg-primary/10 text-primary" : ""}`}>
+              {m}+{m}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <label className="text-xs">Halves
+            <input type="number" min={1} max={4} value={halves} onChange={(e) => setHalves(Math.max(1, Number(e.target.value) || 1))} className="mt-1 w-full rounded-md border bg-background px-2 py-1 text-sm" />
+          </label>
+          <label className="text-xs">Min/half
+            <input type="number" min={1} max={60} value={mph} onChange={(e) => setMph(Math.max(1, Number(e.target.value) || 1))} className="mt-1 w-full rounded-md border bg-background px-2 py-1 text-sm" />
+          </label>
+          <label className="text-xs">Extra/half
+            <input type="number" min={0} max={30} value={extra} onChange={(e) => setExtra(Math.max(0, Number(e.target.value) || 0))} className="mt-1 w-full rounded-md border bg-background px-2 py-1 text-sm" />
+          </label>
+        </div>
+      </div>
       <div className="flex gap-2">
         <Button type="submit" size="sm">Create</Button>
         <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>

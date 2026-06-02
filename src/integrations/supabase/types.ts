@@ -182,9 +182,12 @@ export type Database = {
           away_team_id: string
           created_at: string
           current_half: number
+          extra_time_minutes_per_half: number
           home_score: number
           home_team_id: string
           id: string
+          minutes_per_half: number
+          number_of_halves: number
           scheduled_at: string | null
           started_by_user_id: string | null
           status: Database["public"]["Enums"]["match_status"]
@@ -198,9 +201,12 @@ export type Database = {
           away_team_id: string
           created_at?: string
           current_half?: number
+          extra_time_minutes_per_half?: number
           home_score?: number
           home_team_id: string
           id?: string
+          minutes_per_half?: number
+          number_of_halves?: number
           scheduled_at?: string | null
           started_by_user_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
@@ -214,9 +220,12 @@ export type Database = {
           away_team_id?: string
           created_at?: string
           current_half?: number
+          extra_time_minutes_per_half?: number
           home_score?: number
           home_team_id?: string
           id?: string
+          minutes_per_half?: number
+          number_of_halves?: number
           scheduled_at?: string | null
           started_by_user_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
