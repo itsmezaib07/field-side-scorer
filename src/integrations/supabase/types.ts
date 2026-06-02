@@ -183,12 +183,17 @@ export type Database = {
           created_at: string
           current_half: number
           extra_time_minutes_per_half: number
+          first_half_actual_seconds: number | null
+          first_half_stoppage_seconds: number
           home_score: number
           home_team_id: string
           id: string
           minutes_per_half: number
           number_of_halves: number
           scheduled_at: string | null
+          second_half_actual_seconds: number | null
+          second_half_minutes: number | null
+          second_half_stoppage_seconds: number
           started_by_user_id: string | null
           status: Database["public"]["Enums"]["match_status"]
           timer_started_at: string | null
@@ -202,12 +207,17 @@ export type Database = {
           created_at?: string
           current_half?: number
           extra_time_minutes_per_half?: number
+          first_half_actual_seconds?: number | null
+          first_half_stoppage_seconds?: number
           home_score?: number
           home_team_id: string
           id?: string
           minutes_per_half?: number
           number_of_halves?: number
           scheduled_at?: string | null
+          second_half_actual_seconds?: number | null
+          second_half_minutes?: number | null
+          second_half_stoppage_seconds?: number
           started_by_user_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           timer_started_at?: string | null
@@ -221,12 +231,17 @@ export type Database = {
           created_at?: string
           current_half?: number
           extra_time_minutes_per_half?: number
+          first_half_actual_seconds?: number | null
+          first_half_stoppage_seconds?: number
           home_score?: number
           home_team_id?: string
           id?: string
           minutes_per_half?: number
           number_of_halves?: number
           scheduled_at?: string | null
+          second_half_actual_seconds?: number | null
+          second_half_minutes?: number | null
+          second_half_stoppage_seconds?: number
           started_by_user_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           timer_started_at?: string | null
