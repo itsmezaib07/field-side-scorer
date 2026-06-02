@@ -394,9 +394,16 @@ function EventDialog({ kind, match, minute, onClose }: { kind: string | null; ma
   const [assistId, setAssistId] = useState<string | null>(null);
   const [subInId, setSubInId] = useState<string | null>(null);
   const [editMinute, setEditMinute] = useState<string>("");
+  const [foulOutcome, setFoulOutcome] = useState<string>("direct_free_kick");
+  const [cardType, setCardType] = useState<"none" | "yellow" | "red">("none");
+  const [cardPlayerId, setCardPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (kind) { setTeamId(null); setPlayerId(null); setAssistId(null); setSubInId(null); setEditMinute(String(minute)); }
+    if (kind) {
+      setTeamId(null); setPlayerId(null); setAssistId(null); setSubInId(null);
+      setEditMinute(String(minute));
+      setFoulOutcome("direct_free_kick"); setCardType("none"); setCardPlayerId(null);
+    }
   }, [kind, minute]);
 
   const { data: players } = useQuery<Player[]>({
@@ -435,6 +442,14 @@ function EventDialog({ kind, match, minute, onClose }: { kind: string | null; ma
       if (!playerId || !subInId) return toast.error("Pick both players");
       base.player_id = playerId; // off
       base.sub_in_player_id = subInId; // on
+    } else if (kind === "foul") {
+      if (!playerId) return toast.error("Pick offending player");
+      base.player_id = playerId;
+      base.foul_outcome = foulOutcome;
+      if (cardType !== "none") {
+        base.card_type = cardType;
+        base.card_player_id = cardPlayerId ?? playerId;
+      }
     }
     const { error } = await supabase.from("match_events").insert(base);
     if (error) return toast.error(error.message);
@@ -462,7 +477,7 @@ function EventDialog({ kind, match, minute, onClose }: { kind: string | null; ma
 
           {teamId && (
             <>
-              <PlayerPicker label={kind === "substitution" ? "Player off" : kind === "goal" ? "Scorer" : "Player"}
+              <PlayerPicker label={kind === "substitution" ? "Player off" : kind === "goal" ? "Scorer" : kind === "foul" ? "Offending player" : "Player"}
                 players={players ?? []} value={playerId} onChange={setPlayerId} />
               {kind === "goal" && (
                 <PlayerPicker label="Assist (optional)" players={(players ?? []).filter((p) => p.id !== playerId)}
@@ -471,6 +486,42 @@ function EventDialog({ kind, match, minute, onClose }: { kind: string | null; ma
               {kind === "substitution" && (
                 <PlayerPicker label="Player on" players={(players ?? []).filter((p) => p.id !== playerId)}
                   value={subInId} onChange={setSubInId} />
+              )}
+              {kind === "foul" && (
+                <>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Foul outcome</div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {[
+                        ["direct_free_kick", "Direct FK"],
+                        ["indirect_free_kick", "Indirect FK"],
+                        ["penalty", "Penalty"],
+                        ["advantage", "Advantage"],
+                        ["no_action", "No action"],
+                      ].map(([v, l]) => (
+                        <button key={v} type="button" onClick={() => setFoulOutcome(v)}
+                          className={`rounded-md border p-2 text-xs ${foulOutcome === v ? "border-primary bg-primary/10 text-primary" : ""}`}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Card</div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {[
+                        ["none", "No card"],
+                        ["yellow", "🟨 Yellow"],
+                        ["red", "🟥 Red"],
+                      ].map(([v, l]) => (
+                        <button key={v} type="button" onClick={() => { setCardType(v as any); setCardPlayerId(playerId); }}
+                          className={`rounded-md border p-2 text-xs ${cardType === v ? "border-primary bg-primary/10 text-primary" : ""}`}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {cardType !== "none" && (
+                    <PlayerPicker label="Player receiving card"
+                      players={players ?? []} value={cardPlayerId} onChange={setCardPlayerId} />
+                  )}
+                </>
               )}
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Minute</div>
