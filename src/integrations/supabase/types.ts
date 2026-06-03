@@ -460,6 +460,10 @@ export type Database = {
         Args: { _team_id: string; _user_id: string }
         Returns: boolean
       }
+      is_team_tournament_admin: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_tournament_admin: {
         Args: { _tournament_id: string; _user_id: string }
         Returns: boolean
