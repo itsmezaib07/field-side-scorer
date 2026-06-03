@@ -1,10 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { computeStandings } from "@/lib/standings";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -65,6 +66,7 @@ function TournamentDetail() {
         <h1 className="text-xl font-bold">{t.name}</h1>
         <p className="text-xs text-muted-foreground uppercase">{t.format} · {t.status}</p>
         {t.description && <p className="text-sm mt-1">{t.description}</p>}
+        {isAdmin && <DeleteTournament tournament={t} matches={matches ?? []} />}
       </div>
 
       <Tabs defaultValue="matches">
