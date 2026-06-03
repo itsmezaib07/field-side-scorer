@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -209,6 +209,27 @@ function foulOutcomeLabel(o: string | null | undefined) {
 
 function AdminPanel({ match }: { match: any }) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmStep, setConfirmStep] = useState(1);
+  const [deleting, setDeleting] = useState(false);
+  const hasLiveData = ["first_half", "halftime", "second_half", "paused", "finished"].includes(match.status);
+
+  const openDelete = () => {
+    setConfirmStep(1);
+    setConfirmOpen(true);
+  };
+
+  const doDelete = async () => {
+    setDeleting(true);
+    const { error } = await supabase.from("matches").delete().eq("id", match.id);
+    setDeleting(false);
+    if (error) return toast.error(error.message);
+    toast.success("Match deleted");
+    setConfirmOpen(false);
+    navigate({ to: "/tournaments/$tournamentId", params: { tournamentId: match.tournament_id } });
+  };
+
   return (
     <div className="rounded-xl border bg-card p-3 space-y-2">
       <div className="flex items-center justify-between">
@@ -216,6 +237,47 @@ function AdminPanel({ match }: { match: any }) {
         <button onClick={() => setOpen((x) => !x)} className="text-xs text-primary">{open ? "Hide" : "Manage scorers"}</button>
       </div>
       {open && <ScorersManager matchId={match.id} />}
+      <div className="pt-2 border-t">
+        <Button variant="destructive" size="sm" onClick={openDelete} className="w-full">
+          <Trash2 className="h-4 w-4" /> Delete Match
+        </Button>
+      </div>
+      <Dialog open={confirmOpen} onOpenChange={(v) => { if (!deleting) setConfirmOpen(v); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Match?</DialogTitle>
+          </DialogHeader>
+          {confirmStep === 1 ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to permanently delete this match? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => { if (hasLiveData) setConfirmStep(2); else doDelete(); }}
+                  disabled={deleting}
+                >
+                  Delete Match
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-destructive font-medium">
+                This match contains live match data. Deleting it will permanently remove the score, timeline events, statistics, and match records.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={deleting}>Cancel</Button>
+                <Button variant="destructive" onClick={doDelete} disabled={deleting}>
+                  {deleting ? "Deleting…" : "Permanently Delete"}
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
