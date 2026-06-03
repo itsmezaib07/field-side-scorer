@@ -274,8 +274,11 @@ export type Database = {
       players: {
         Row: {
           created_at: string
+          date_of_birth: string | null
           id: string
           jersey_number: number | null
+          last_modified_at: string | null
+          last_modified_by: string | null
           name: string
           photo_url: string | null
           position: string | null
@@ -283,8 +286,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          date_of_birth?: string | null
           id?: string
           jersey_number?: number | null
+          last_modified_at?: string | null
+          last_modified_by?: string | null
           name: string
           photo_url?: string | null
           position?: string | null
@@ -292,8 +298,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          date_of_birth?: string | null
           id?: string
           jersey_number?: number | null
+          last_modified_at?: string | null
+          last_modified_by?: string | null
           name?: string
           photo_url?: string | null
           position?: string | null
@@ -335,28 +344,43 @@ export type Database = {
       }
       teams: {
         Row: {
+          contact_info: string | null
           created_at: string
           description: string | null
+          home_ground: string | null
           id: string
+          last_modified_at: string | null
+          last_modified_by: string | null
           logo_url: string | null
           name: string
           owner_id: string
+          team_colors: string | null
         }
         Insert: {
+          contact_info?: string | null
           created_at?: string
           description?: string | null
+          home_ground?: string | null
           id?: string
+          last_modified_at?: string | null
+          last_modified_by?: string | null
           logo_url?: string | null
           name: string
           owner_id: string
+          team_colors?: string | null
         }
         Update: {
+          contact_info?: string | null
           created_at?: string
           description?: string | null
+          home_ground?: string | null
           id?: string
+          last_modified_at?: string | null
+          last_modified_by?: string | null
           logo_url?: string | null
           name?: string
           owner_id?: string
+          team_colors?: string | null
         }
         Relationships: []
       }
