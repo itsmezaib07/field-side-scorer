@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Shield, Plus, Trash2, Pencil } from "lucide-react";
+import { Shield, Plus, Trash2, Pencil, Archive } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/teams/$teamId")({
@@ -18,6 +18,7 @@ function TeamDetail() {
   const { teamId } = Route.useParams();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: team } = useQuery({
     queryKey: ["team", teamId],
@@ -97,9 +98,11 @@ function TeamDetail() {
   });
   const isOwner = team && user?.id === team.owner_id;
   const canEdit = !!(isOwner || canAdmin);
+  const canDelete = canEdit;
   const [adding, setAdding] = useState(false);
   const [editingTeam, setEditingTeam] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState("");
   const [num, setNum] = useState("");
   const [pos, setPos] = useState("");
@@ -153,6 +156,11 @@ function TeamDetail() {
         {canEdit && (
           <Button size="sm" variant="outline" onClick={() => setEditingTeam(true)}>
             <Pencil className="h-4 w-4 mr-1" /> Edit
+          </Button>
+        )}
+        {canDelete && (
+          <Button size="sm" variant="outline" onClick={() => setDeleting(true)}>
+            <Trash2 className="h-4 w-4 mr-1" /> Delete
           </Button>
         )}
       </div>
@@ -241,7 +249,92 @@ function TeamDetail() {
           onSaved={() => { setEditingPlayer(null); qc.invalidateQueries({ queryKey: ["players", teamId] }); }}
         />
       )}
+      {deleting && (
+        <DeleteTeamDialog
+          team={team}
+          onClose={() => setDeleting(false)}
+          onDone={() => navigate({ to: "/teams" })}
+        />
+      )}
     </div>
+  );
+}
+
+function DeleteTeamDialog({ team, onClose, onDone }: { team: any; onClose: () => void; onDone: () => void }) {
+  const [working, setWorking] = useState(false);
+
+  const { data: usage } = useQuery({
+    queryKey: ["team-usage", team.id],
+    queryFn: async () => {
+      const [{ count: playersCount }, { count: tournamentsCount }, { count: eventsCount }] = await Promise.all([
+        supabase.from("players").select("id", { count: "exact", head: true }).eq("team_id", team.id),
+        supabase.from("tournament_teams").select("team_id", { count: "exact", head: true }).eq("team_id", team.id),
+        supabase.from("match_events").select("id", { count: "exact", head: true }).eq("team_id", team.id),
+      ]);
+      return {
+        players: playersCount ?? 0,
+        tournaments: tournamentsCount ?? 0,
+        events: eventsCount ?? 0,
+      };
+    },
+  });
+
+  const hasHistory = !!usage && (usage.players + usage.tournaments + usage.events > 0);
+
+  const archive = async () => {
+    setWorking(true);
+    const { error } = await supabase
+      .from("teams")
+      .update({ is_archived: true, archived_at: new Date().toISOString() })
+      .eq("id", team.id);
+    setWorking(false);
+    if (error) return toast.error(error.message);
+    toast.success("Team archived.");
+    onDone();
+  };
+
+  const hardDelete = async () => {
+    if (!confirm("This permanently removes the team. Continue?")) return;
+    setWorking(true);
+    const { error } = await supabase.from("teams").delete().eq("id", team.id);
+    setWorking(false);
+    if (error) return toast.error(error.message);
+    toast.success("Team deleted.");
+    onDone();
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && !working && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Team?</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <p>Are you sure you want to permanently delete this team?</p>
+          {hasHistory && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-destructive">
+              This team has associated players, matches, and statistics. Deleting it may affect historical records.
+              <div className="mt-1 text-xs opacity-80">
+                {usage!.players} players · {usage!.tournaments} tournament(s) · {usage!.events} match event(s)
+              </div>
+            </div>
+          )}
+          <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+            <div className="font-medium flex items-center gap-1"><Archive className="h-4 w-4" /> Archive (recommended)</div>
+            <p className="text-xs text-muted-foreground">Team becomes inactive and hidden from active lists. Historical records remain intact.</p>
+            <Button size="sm" variant="outline" onClick={archive} disabled={working}>Archive Team</Button>
+          </div>
+          <div className="rounded-md border border-destructive/40 p-3 space-y-2">
+            <div className="font-medium text-destructive flex items-center gap-1"><Trash2 className="h-4 w-4" /> Permanent Delete</div>
+            <p className="text-xs text-muted-foreground">Completely removes the team. Linked history may be lost.</p>
+            <Button size="sm" variant="destructive" onClick={hardDelete} disabled={working}>Delete Permanently</Button>
+          </div>
+        </div>
+        <div className="flex justify-end pt-2">
+          <Button variant="ghost" onClick={onClose} disabled={working}>Cancel</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
