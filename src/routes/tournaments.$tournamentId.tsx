@@ -173,7 +173,7 @@ function AddTeamForm({ tournamentId, existingIds, onAdded }: { tournamentId: str
   const { data: teams } = useQuery({
     queryKey: ["all-teams"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("teams").select("id, name").order("name");
+      const { data, error } = await supabase.from("teams").select("id, name").eq("is_archived", false).order("name");
       if (error) throw error;
       return data;
     },
