@@ -629,21 +629,28 @@ function MatchSummary({ match }: { match: any }) {
   const baseMph = match.minutes_per_half ?? 45;
   const halves = match.number_of_halves ?? 2;
   const fmt = (sec?: number | null) => sec == null ? "—" : `${Math.floor(sec / 60)}'${String(sec % 60).padStart(2, "0")}`;
+  const total = (match.first_half_actual_seconds ?? 0) + (match.second_half_actual_seconds ?? 0);
+  const secondConfigured = match.second_half_minutes ?? baseMph;
   return (
     <section className="rounded-xl border bg-card p-3 space-y-2">
       <h2 className="font-semibold">Match report</h2>
       <dl className="grid grid-cols-2 gap-y-1 text-sm">
-        <dt className="text-muted-foreground">Scheduled duration</dt>
-        <dd>{Array.from({ length: halves }).map(() => baseMph).join(" + ")} min</dd>
-        <dt className="text-muted-foreground">1st half actual</dt>
+        <dt className="text-muted-foreground">Configured 1st half</dt>
+        <dd>{baseMph} min</dd>
+        <dt className="text-muted-foreground">Actual 1st half</dt>
         <dd>{fmt(match.first_half_actual_seconds)}</dd>
-        <dt className="text-muted-foreground">2nd half actual</dt>
+        <dt className="text-muted-foreground">Configured 2nd half</dt>
+        <dd>{secondConfigured} min</dd>
+        <dt className="text-muted-foreground">Actual 2nd half</dt>
         <dd>{fmt(match.second_half_actual_seconds)}</dd>
         <dt className="text-muted-foreground">1st half stoppage</dt>
         <dd>+{Math.round((match.first_half_stoppage_seconds ?? 0) / 60)}'</dd>
         <dt className="text-muted-foreground">2nd half stoppage</dt>
         <dd>+{Math.round((match.second_half_stoppage_seconds ?? 0) / 60)}'</dd>
+        <dt className="text-muted-foreground font-medium">Total match length</dt>
+        <dd className="font-semibold">{fmt(total)}</dd>
       </dl>
+      <p className="text-[10px] text-muted-foreground">Halves played: {halves}</p>
     </section>
   );
 }
