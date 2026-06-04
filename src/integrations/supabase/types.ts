@@ -344,11 +344,13 @@ export type Database = {
       }
       teams: {
         Row: {
+          archived_at: string | null
           contact_info: string | null
           created_at: string
           description: string | null
           home_ground: string | null
           id: string
+          is_archived: boolean
           last_modified_at: string | null
           last_modified_by: string | null
           logo_url: string | null
@@ -357,11 +359,13 @@ export type Database = {
           team_colors: string | null
         }
         Insert: {
+          archived_at?: string | null
           contact_info?: string | null
           created_at?: string
           description?: string | null
           home_ground?: string | null
           id?: string
+          is_archived?: boolean
           last_modified_at?: string | null
           last_modified_by?: string | null
           logo_url?: string | null
@@ -370,11 +374,13 @@ export type Database = {
           team_colors?: string | null
         }
         Update: {
+          archived_at?: string | null
           contact_info?: string | null
           created_at?: string
           description?: string | null
           home_ground?: string | null
           id?: string
+          is_archived?: boolean
           last_modified_at?: string | null
           last_modified_by?: string | null
           logo_url?: string | null
