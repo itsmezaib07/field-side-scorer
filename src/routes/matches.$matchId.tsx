@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatClock, getElapsedSeconds, getMinute } from "@/lib/match-timer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -332,16 +332,28 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
   const minute = getMinute(elapsed);
 
   const baseMph = match.minutes_per_half ?? 45;
-  const firstHalfBaseSec = baseMph * 60 + (match.first_half_stoppage_seconds ?? 0);
-  const secondHalfBaseSec = ((match.second_half_minutes ?? baseMph) * 60) + (match.second_half_stoppage_seconds ?? 0);
-  const firstHalfReached = elapsed >= firstHalfBaseSec;
-  const fullTimeReached = elapsed >= firstHalfBaseSec + secondHalfBaseSec;
+  // Configured durations (base, without stoppage)
+  const firstHalfConfiguredSec = baseMph * 60;
+  // For the 2nd half target, use the per-match override if set (chosen at half-time),
+  // otherwise fall back to the configured base.
+  const secondHalfConfiguredSec = (match.second_half_minutes ?? baseMph) * 60;
 
-  const currentHalfLimit = match.status === "second_half" || match.current_half === 2
-    ? firstHalfBaseSec + secondHalfBaseSec
-    : firstHalfBaseSec;
-  const secondsToEnd = currentHalfLimit - elapsed;
-  const showStoppage = (match.status === "first_half" || match.status === "second_half") && secondsToEnd <= 5 * 60;
+  // Effective hard limits (configured + admin-added stoppage)
+  const firstHalfLimitSec = firstHalfConfiguredSec + (match.first_half_stoppage_seconds ?? 0);
+  const firstActual = match.first_half_actual_seconds ?? 0;
+  const secondHalfElapsed = Math.max(0, elapsed - firstActual);
+  const secondHalfLimitSec = secondHalfConfiguredSec + (match.second_half_stoppage_seconds ?? 0);
+
+  // Full-time becomes available once the second half has reached its configured target.
+  const fullTimeReached = match.status === "second_half" && secondHalfElapsed >= secondHalfConfiguredSec;
+
+  // Stoppage prompt: only AT or after configured duration of the current half.
+  const inFirst = match.status === "first_half";
+  const inSecond = match.status === "second_half";
+  const currentHalfElapsed = inSecond ? secondHalfElapsed : elapsed;
+  const currentHalfConfiguredSec = inSecond ? secondHalfConfiguredSec : firstHalfConfiguredSec;
+  const currentHalfLimitSec = inSecond ? secondHalfLimitSec : firstHalfLimitSec;
+  const showStoppage = (inFirst || inSecond) && currentHalfElapsed >= currentHalfConfiguredSec;
 
   // Smart suggestion: events in last 90s that often warrant stoppage
   const recentSuggestion = (() => {
@@ -357,6 +369,7 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
   })();
 
   const [halftimePrompt, setHalftimePrompt] = useState(false);
+  const autoEndedRef = useRef(false);
 
   const log = async (payload: any) => {
     const { error } = await supabase.from("match_events").insert({ match_id: matchId, minute, ...payload });
@@ -433,13 +446,17 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
 
   const fulltime = async () => {
     if (!confirm("End the match?")) return;
+    await endMatchNow();
+  };
+
+  const endMatchNow = async () => {
     const acc = getElapsedSeconds(match);
-    const firstActual = match.first_half_actual_seconds ?? Math.min(acc, firstHalfBaseSec);
+    const fa = match.first_half_actual_seconds ?? Math.min(acc, firstHalfLimitSec);
     const { error } = await supabase.from("matches").update({
       status: "finished",
       timer_started_at: null,
       accumulated_seconds: acc,
-      second_half_actual_seconds: Math.max(0, acc - firstActual),
+      second_half_actual_seconds: Math.max(0, acc - fa),
     }).eq("id", matchId);
     if (error) return toast.error(error.message);
     await log({ type: "fulltime" });
@@ -456,6 +473,30 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
     toast.success(`Added +${extraMinutes}' stoppage time`);
   };
 
+  // Auto-end the current half when the hard limit (configured + stoppage) is reached,
+  // so matches can never run indefinitely if admin ignores the prompt.
+  useEffect(() => {
+    if (!(inFirst || inSecond)) return;
+    if (currentHalfElapsed < currentHalfLimitSec) return;
+    if (autoEndedRef.current) return;
+    autoEndedRef.current = true;
+    if (inFirst) {
+      // Auto-finish first half at configured (+ stoppage) duration.
+      const acc = getElapsedSeconds(match);
+      finishFirstHalf(acc, match.second_half_minutes ?? baseMph);
+      toast.message("Half time reached — auto-ending first half");
+    } else if (inSecond) {
+      endMatchNow();
+      toast.message("Full time reached — auto-ending match");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inFirst, inSecond, currentHalfElapsed, currentHalfLimitSec]);
+
+  // Reset auto-end guard when the half changes.
+  useEffect(() => {
+    autoEndedRef.current = false;
+  }, [match.status, match.current_half]);
+
   const [event, setEvent] = useState<null | "goal" | "yellow_card" | "red_card" | "substitution" | "foul">(null);
 
   if (match.status === "finished") {
@@ -467,7 +508,7 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
       {showStoppage && (
         <div className="rounded-lg border border-dashed bg-muted/40 p-2 space-y-2">
           <div className="text-xs font-semibold flex items-center justify-between">
-            <span>Add stoppage time?</span>
+            <span>{inSecond ? "Full time approaching — add stoppage?" : "Half time approaching — add stoppage?"}</span>
             <span className="text-muted-foreground">
               Current: +{Math.round((match.current_half === 2 ? match.second_half_stoppage_seconds : match.first_half_stoppage_seconds) / 60) || 0}'
             </span>
@@ -484,6 +525,9 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
               const n = Number(v);
               if (n > 0) addStoppage(n);
             }}>Custom</Button>
+            <Button size="sm" variant="destructive" onClick={() => { inSecond ? endMatchNow() : halftime(); }}>
+              End {inSecond ? "match" : "half"} now
+            </Button>
           </div>
         </div>
       )}
@@ -495,7 +539,7 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
         {match.status === "first_half" && (
           <>
             <Button onClick={pause} variant="outline" className="flex-1"><Pause className="h-4 w-4 mr-1" />Pause</Button>
-            <Button onClick={halftime} disabled={!firstHalfReached} className="flex-1"><Flag className="h-4 w-4 mr-1" />Half time</Button>
+            <Button onClick={halftime} className="flex-1"><Flag className="h-4 w-4 mr-1" />Half time</Button>
           </>
         )}
         {match.status === "halftime" && (
@@ -585,21 +629,28 @@ function MatchSummary({ match }: { match: any }) {
   const baseMph = match.minutes_per_half ?? 45;
   const halves = match.number_of_halves ?? 2;
   const fmt = (sec?: number | null) => sec == null ? "—" : `${Math.floor(sec / 60)}'${String(sec % 60).padStart(2, "0")}`;
+  const total = (match.first_half_actual_seconds ?? 0) + (match.second_half_actual_seconds ?? 0);
+  const secondConfigured = match.second_half_minutes ?? baseMph;
   return (
     <section className="rounded-xl border bg-card p-3 space-y-2">
       <h2 className="font-semibold">Match report</h2>
       <dl className="grid grid-cols-2 gap-y-1 text-sm">
-        <dt className="text-muted-foreground">Scheduled duration</dt>
-        <dd>{Array.from({ length: halves }).map(() => baseMph).join(" + ")} min</dd>
-        <dt className="text-muted-foreground">1st half actual</dt>
+        <dt className="text-muted-foreground">Configured 1st half</dt>
+        <dd>{baseMph} min</dd>
+        <dt className="text-muted-foreground">Actual 1st half</dt>
         <dd>{fmt(match.first_half_actual_seconds)}</dd>
-        <dt className="text-muted-foreground">2nd half actual</dt>
+        <dt className="text-muted-foreground">Configured 2nd half</dt>
+        <dd>{secondConfigured} min</dd>
+        <dt className="text-muted-foreground">Actual 2nd half</dt>
         <dd>{fmt(match.second_half_actual_seconds)}</dd>
         <dt className="text-muted-foreground">1st half stoppage</dt>
         <dd>+{Math.round((match.first_half_stoppage_seconds ?? 0) / 60)}'</dd>
         <dt className="text-muted-foreground">2nd half stoppage</dt>
         <dd>+{Math.round((match.second_half_stoppage_seconds ?? 0) / 60)}'</dd>
+        <dt className="text-muted-foreground font-medium">Total match length</dt>
+        <dd className="font-semibold">{fmt(total)}</dd>
       </dl>
+      <p className="text-[10px] text-muted-foreground">Halves played: {halves}</p>
     </section>
   );
 }
