@@ -16,7 +16,8 @@ function TeamsList() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("teams")
-        .select("id, name, description, logo_url, owner_id")
+        .select("id, name, description, logo_url, owner_id, is_archived")
+        .eq("is_archived", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
