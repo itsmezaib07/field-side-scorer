@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { usePlatformOwner } from "@/lib/use-platform-owner";
 import { Plus, Shield, ArchiveRestore, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/teams/")({
 
 function TeamsList() {
   const { user } = useAuth();
+  const isPlatformOwner = usePlatformOwner();
   const qc = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const { data, isLoading } = useQuery({
@@ -91,7 +93,7 @@ function TeamsList() {
                 </div>
                 {user?.id === t.owner_id && <span className="text-[10px] text-primary uppercase">Owner</span>}
               </Link>
-              {showArchived && user?.id === t.owner_id && (
+              {showArchived && (isPlatformOwner || user?.id === t.owner_id) && (
                 <div className="flex items-center gap-1">
                   <button onClick={() => restore(t.id)} title="Restore" className="p-1.5 text-muted-foreground hover:text-primary">
                     <ArchiveRestore className="h-4 w-4" />

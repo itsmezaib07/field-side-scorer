@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { usePlatformOwner } from "@/lib/use-platform-owner";
 import { useEffect, useRef, useState } from "react";
 import { formatClock, getElapsedSeconds, getMinute } from "@/lib/match-timer";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ type Player = { id: string; name: string; jersey_number: number | null; team_id:
 function MatchView() {
   const { matchId } = Route.useParams();
   const { user } = useAuth();
+  const isPlatformOwner = usePlatformOwner();
   const qc = useQueryClient();
   const [tick, setTick] = useState(0);
 
@@ -75,7 +77,7 @@ function MatchView() {
 
   if (!match) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
-  const isAdmin = user?.id === match.tournament?.creator_id;
+  const isAdmin = isPlatformOwner || user?.id === match.tournament?.creator_id;
   const isScorer = isAdmin || (scorers ?? []).some((s) => s.user_id === user?.id);
   const elapsed = getElapsedSeconds(match);
   void tick;

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { usePlatformOwner } from "@/lib/use-platform-owner";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/teams/$teamId")({
 function TeamDetail() {
   const { teamId } = Route.useParams();
   const { user } = useAuth();
+  const isPlatformOwner = usePlatformOwner();
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -97,7 +99,7 @@ function TeamDetail() {
     },
   });
   const isOwner = team && user?.id === team.owner_id;
-  const canEdit = !!(isOwner || canAdmin);
+  const canEdit = !!(isPlatformOwner || isOwner || canAdmin);
   const canDelete = canEdit;
   const [adding, setAdding] = useState(false);
   const [editingTeam, setEditingTeam] = useState(false);

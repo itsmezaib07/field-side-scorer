@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { usePlatformOwner } from "@/lib/use-platform-owner";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/tournaments/$tournamentId")({
 function TournamentDetail() {
   const { tournamentId } = Route.useParams();
   const { user } = useAuth();
+  const isPlatformOwner = usePlatformOwner();
   const qc = useQueryClient();
 
   const { data: t } = useQuery({
@@ -53,7 +55,7 @@ function TournamentDetail() {
     },
   });
 
-  const isAdmin = t && user?.id === t.creator_id;
+  const isAdmin = t && (isPlatformOwner || user?.id === t.creator_id);
   const teamIds = (tt ?? []).map((x: any) => x.team_id);
   const standings = computeStandings((matches ?? []) as any, teamIds);
   const nameOf = (id: string) => (tt ?? []).find((x: any) => x.team_id === id)?.teams?.name ?? "—";
