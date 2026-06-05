@@ -346,9 +346,6 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
   const secondHalfElapsed = Math.max(0, elapsed - firstActual);
   const secondHalfLimitSec = secondHalfConfiguredSec + (match.second_half_stoppage_seconds ?? 0);
 
-  // Full-time becomes available once the second half has reached its configured target.
-  const fullTimeReached = match.status === "second_half" && secondHalfElapsed >= secondHalfConfiguredSec;
-
   // Stoppage prompt: only AT or after configured duration of the current half.
   const inFirst = match.status === "first_half";
   const inSecond = match.status === "second_half";
@@ -356,6 +353,10 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
   const currentHalfConfiguredSec = inSecond ? secondHalfConfiguredSec : firstHalfConfiguredSec;
   const currentHalfLimitSec = inSecond ? secondHalfLimitSec : firstHalfLimitSec;
   const showStoppage = (inFirst || inSecond) && currentHalfElapsed >= currentHalfConfiguredSec;
+
+  // Grace period (seconds) before auto-ending after the scheduled (configured + stoppage)
+  // duration is reached. Gives the admin a real window to react to the stoppage dialog.
+  const AUTO_END_GRACE_SEC = 45;
 
   // Smart suggestion: events in last 90s that often warrant stoppage
   const recentSuggestion = (() => {
@@ -371,6 +372,7 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
   })();
 
   const [halftimePrompt, setHalftimePrompt] = useState(false);
+  const [fullTimeWarn, setFullTimeWarn] = useState(false);
   const autoEndedRef = useRef(false);
 
   const log = async (payload: any) => {
@@ -447,6 +449,12 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
   };
 
   const fulltime = async () => {
+    // If the second half hasn't yet reached the actual first-half duration,
+    // show a warning dialog (but still allow the admin to proceed).
+    if (inSecond && firstActual > 0 && secondHalfElapsed < firstActual) {
+      setFullTimeWarn(true);
+      return;
+    }
     if (!confirm("End the match?")) return;
     await endMatchNow();
   };
@@ -476,10 +484,11 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
   };
 
   // Auto-end the current half when the hard limit (configured + stoppage) is reached,
-  // so matches can never run indefinitely if admin ignores the prompt.
+  // plus a grace window so the stoppage dialog stays on screen long enough for the
+  // admin to respond before the system ends the half/match automatically.
   useEffect(() => {
     if (!(inFirst || inSecond)) return;
-    if (currentHalfElapsed < currentHalfLimitSec) return;
+    if (currentHalfElapsed < currentHalfLimitSec + AUTO_END_GRACE_SEC) return;
     if (autoEndedRef.current) return;
     autoEndedRef.current = true;
     if (inFirst) {
@@ -515,6 +524,9 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
               Current: +{Math.round((match.current_half === 2 ? match.second_half_stoppage_seconds : match.first_half_stoppage_seconds) / 60) || 0}'
             </span>
           </div>
+          <div className="text-[11px] text-muted-foreground">
+            Auto-end in {Math.max(0, currentHalfLimitSec + AUTO_END_GRACE_SEC - currentHalfElapsed)}s if no action.
+          </div>
           {recentSuggestion && (
             <div className="text-[11px] text-muted-foreground">Suggested due to: {recentSuggestion}</div>
           )}
@@ -527,7 +539,7 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
               const n = Number(v);
               if (n > 0) addStoppage(n);
             }}>Custom</Button>
-            <Button size="sm" variant="destructive" onClick={() => { inSecond ? endMatchNow() : halftime(); }}>
+            <Button size="sm" variant="destructive" onClick={() => { inSecond ? fulltime() : halftime(); }}>
               End {inSecond ? "match" : "half"} now
             </Button>
           </div>
@@ -550,7 +562,7 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
         {match.status === "second_half" && (
           <>
             <Button onClick={pause} variant="outline" className="flex-1"><Pause className="h-4 w-4 mr-1" />Pause</Button>
-            <Button onClick={fulltime} disabled={!fullTimeReached} className="flex-1"><Square className="h-4 w-4 mr-1" />Full time</Button>
+            <Button onClick={fulltime} className="flex-1"><Square className="h-4 w-4 mr-1" />Full time</Button>
           </>
         )}
         {match.status === "paused" && (
@@ -582,6 +594,30 @@ function ScoringPanel({ match, elapsed, events }: { match: any; elapsed: number;
         baseMph={baseMph}
         onConfirm={(secondHalfMin) => finishFirstHalf(getElapsedSeconds(match), secondHalfMin)}
       />
+
+      <Dialog open={fullTimeWarn} onOpenChange={setFullTimeWarn}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>End Match Early?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>
+              The first half lasted {Math.round(firstActual / 60)} minutes, but the second
+              half has only lasted {Math.round(secondHalfElapsed / 60)} minutes.
+            </p>
+            <p className="text-muted-foreground">
+              Ending the match now will result in the second half being shorter than the
+              first half. Are you sure you want to end the match?
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setFullTimeWarn(false)}>Continue Match</Button>
+              <Button variant="destructive" onClick={async () => { setFullTimeWarn(false); await endMatchNow(); }}>
+                End Match Anyway
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
