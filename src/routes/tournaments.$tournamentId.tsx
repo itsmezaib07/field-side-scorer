@@ -268,16 +268,11 @@ function NewMatchForm({ tournamentId, teams, onCreated }: { tournamentId: string
   );
 }
 
-function DeleteTournament({ tournament, matches }: { tournament: any; matches: any[] }) {
+function DeleteTournament({ tournament }: { tournament: any; matches: any[] }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState(1);
-  const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const hasLive = matches.some((m) => ["first_half", "halftime", "second_half", "paused"].includes(m.status));
-
-  const reset = () => { setStep(1); setConfirmName(""); };
-  const close = () => { if (!deleting) { setOpen(false); reset(); } };
+  const close = () => { if (!deleting) setOpen(false); };
 
   const doDelete = async () => {
     setDeleting(true);
@@ -291,7 +286,7 @@ function DeleteTournament({ tournament, matches }: { tournament: any; matches: a
 
   return (
     <>
-      <Button variant="destructive" size="sm" className="mt-2" onClick={() => { reset(); setOpen(true); }}>
+      <Button variant="destructive" size="sm" className="mt-2" onClick={() => setOpen(true)}>
         <Trash2 className="h-4 w-4" /> Delete Tournament
       </Button>
       <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : close())}>
@@ -299,48 +294,15 @@ function DeleteTournament({ tournament, matches }: { tournament: any; matches: a
           <DialogHeader>
             <DialogTitle>Delete Tournament?</DialogTitle>
           </DialogHeader>
-          {step === 1 && (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Are you sure you want to permanently delete this tournament and all related data? This action cannot be undone.
-              </p>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={close}>Cancel</Button>
-                <Button variant="destructive" onClick={() => setStep(hasLive ? 2 : 3)}>Delete Tournament</Button>
-              </div>
-            </>
-          )}
-          {step === 2 && (
-            <>
-              <p className="text-sm text-destructive font-medium">
-                This tournament contains live or paused matches. Deleting it will permanently remove all associated match data.
-              </p>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={close}>Cancel</Button>
-                <Button variant="destructive" onClick={() => setStep(3)}>I understand, continue</Button>
-              </div>
-            </>
-          )}
-          {step === 3 && (
-            <>
-              <p className="text-sm">
-                Type <span className="font-mono font-semibold">{tournament.name}</span> to confirm deletion.
-              </p>
-              <input
-                value={confirmName}
-                onChange={(e) => setConfirmName(e.target.value)}
-                placeholder={tournament.name}
-                className="w-full rounded-md border bg-background px-2 py-1 text-sm"
-                autoFocus
-              />
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={close} disabled={deleting}>Cancel</Button>
-                <Button variant="destructive" onClick={doDelete} disabled={deleting || confirmName.trim() !== tournament.name}>
-                  {deleting ? "Deleting…" : "Permanently Delete"}
-                </Button>
-              </div>
-            </>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to permanently delete <span className="font-semibold text-foreground">{tournament.name}</span> and all related data? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={close} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={doDelete} disabled={deleting}>
+              {deleting ? "Deleting…" : "Delete Tournament"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>
