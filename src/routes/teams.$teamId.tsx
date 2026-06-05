@@ -99,7 +99,7 @@ function TeamDetail() {
     },
   });
   const isOwner = team && user?.id === team.owner_id;
-  const canEdit = !!(isOwner || canAdmin);
+  const canEdit = !!(isPlatformOwner || isOwner || canAdmin);
   const canDelete = canEdit;
   const [adding, setAdding] = useState(false);
   const [editingTeam, setEditingTeam] = useState(false);
