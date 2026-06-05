@@ -77,7 +77,7 @@ function MatchView() {
 
   if (!match) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
-  const isAdmin = user?.id === match.tournament?.creator_id;
+  const isAdmin = isPlatformOwner || user?.id === match.tournament?.creator_id;
   const isScorer = isAdmin || (scorers ?? []).some((s) => s.user_id === user?.id);
   const elapsed = getElapsedSeconds(match);
   void tick;
