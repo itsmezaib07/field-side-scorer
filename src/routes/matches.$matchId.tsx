@@ -20,6 +20,7 @@ type Player = { id: string; name: string; jersey_number: number | null; team_id:
 function MatchView() {
   const { matchId } = Route.useParams();
   const { user } = useAuth();
+  const isPlatformOwner = usePlatformOwner();
   const qc = useQueryClient();
   const [tick, setTick] = useState(0);
 
