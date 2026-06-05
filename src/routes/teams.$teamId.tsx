@@ -18,6 +18,7 @@ export const Route = createFileRoute("/teams/$teamId")({
 function TeamDetail() {
   const { teamId } = Route.useParams();
   const { user } = useAuth();
+  const isPlatformOwner = usePlatformOwner();
   const qc = useQueryClient();
   const navigate = useNavigate();
 
