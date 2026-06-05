@@ -18,6 +18,7 @@ export const Route = createFileRoute("/tournaments/$tournamentId")({
 function TournamentDetail() {
   const { tournamentId } = Route.useParams();
   const { user } = useAuth();
+  const isPlatformOwner = usePlatformOwner();
   const qc = useQueryClient();
 
   const { data: t } = useQuery({
@@ -54,7 +55,7 @@ function TournamentDetail() {
     },
   });
 
-  const isAdmin = t && user?.id === t.creator_id;
+  const isAdmin = t && (isPlatformOwner || user?.id === t.creator_id);
   const teamIds = (tt ?? []).map((x: any) => x.team_id);
   const standings = computeStandings((matches ?? []) as any, teamIds);
   const nameOf = (id: string) => (tt ?? []).find((x: any) => x.team_id === id)?.teams?.name ?? "—";
