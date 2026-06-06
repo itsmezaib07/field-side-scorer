@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { ImageUploader } from "@/components/ImageUploader";
 
 export const Route = createFileRoute("/teams/new")({
   head: () => ({ meta: [{ title: "New team — MatchPad" }] }),
@@ -50,10 +51,13 @@ function NewTeam() {
         <Label>Description</Label>
         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
-      <div>
-        <Label>Logo URL (optional)</Label>
-        <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://…" />
-      </div>
+      <ImageUploader
+        value={logoUrl}
+        onChange={setLogoUrl}
+        folder="team-logos"
+        label="Team logo (optional)"
+        shape="circle"
+      />
       <Button type="submit" disabled={busy} className="w-full">Create team</Button>
     </form>
   );
