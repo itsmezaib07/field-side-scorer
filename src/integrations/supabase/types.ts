@@ -342,10 +342,35 @@ export type Database = {
         }
         Relationships: []
       }
+      team_private_contacts: {
+        Row: {
+          contact_info: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_info?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_info?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_private_contacts_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           archived_at: string | null
-          contact_info: string | null
           created_at: string
           description: string | null
           home_ground: string | null
@@ -360,7 +385,6 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
-          contact_info?: string | null
           created_at?: string
           description?: string | null
           home_ground?: string | null
@@ -375,7 +399,6 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
-          contact_info?: string | null
           created_at?: string
           description?: string | null
           home_ground?: string | null
