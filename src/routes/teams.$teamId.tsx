@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Shield, Plus, Trash2, Pencil, Archive } from "lucide-react";
 import { toast } from "sonner";
+import { ImageUploader } from "@/components/ImageUploader";
 
 export const Route = createFileRoute("/teams/$teamId")({
   component: TeamDetail,
@@ -207,10 +208,13 @@ function TeamDetail() {
             <Label className="text-xs">Position</Label>
             <Input value={pos} onChange={(e) => setPos(e.target.value)} placeholder="GK / DEF / MID / FWD" />
           </div>
-          <div>
-            <Label className="text-xs">Photo URL (optional)</Label>
-            <Input value={photo} onChange={(e) => setPhoto(e.target.value)} />
-          </div>
+          <ImageUploader
+            value={photo}
+            onChange={setPhoto}
+            folder="player-photos"
+            label="Player photo (optional)"
+            shape="circle"
+          />
           <div className="flex gap-2">
             <Button type="submit" size="sm">Save</Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>
