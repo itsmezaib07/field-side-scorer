@@ -380,7 +380,7 @@ function EditTeamDialog({ team, initialContactInfo, onClose, onSaved }: { team: 
     const { error } = await supabase.from("teams").update({
       name: name.trim().slice(0, 100),
       description: description.trim().slice(0, 500) || null,
-      logo_url: logoUrl.trim().slice(0, 500) || null,
+      logo_url: logoUrl.trim().slice(0, 2000) || null,
       home_ground: homeGround.trim().slice(0, 200) || null,
       team_colors: teamColors.trim().slice(0, 100) || null,
     }).eq("id", team.id);
@@ -452,7 +452,7 @@ function EditPlayerDialog({ player, teamId, onClose, onSaved }: { player: any; t
       name: name.trim().slice(0, 100),
       jersey_number: num ? Math.max(0, Math.min(999, Number(num))) : null,
       position: pos.trim().slice(0, 50) || null,
-      photo_url: photo.trim().slice(0, 500) || null,
+      photo_url: photo.trim().slice(0, 2000) || null,
       date_of_birth: dob || null,
       team_id: newTeamId,
     }).eq("id", player.id);
