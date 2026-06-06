@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Shield, Plus, Trash2, Pencil, Archive } from "lucide-react";
 import { toast } from "sonner";
+import { ImageUploader } from "@/components/ImageUploader";
 
 export const Route = createFileRoute("/teams/$teamId")({
   component: TeamDetail,
@@ -207,10 +208,13 @@ function TeamDetail() {
             <Label className="text-xs">Position</Label>
             <Input value={pos} onChange={(e) => setPos(e.target.value)} placeholder="GK / DEF / MID / FWD" />
           </div>
-          <div>
-            <Label className="text-xs">Photo URL (optional)</Label>
-            <Input value={photo} onChange={(e) => setPhoto(e.target.value)} />
-          </div>
+          <ImageUploader
+            value={photo}
+            onChange={setPhoto}
+            folder="player-photos"
+            label="Player photo (optional)"
+            shape="circle"
+          />
           <div className="flex gap-2">
             <Button type="submit" size="sm">Save</Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>
@@ -376,7 +380,7 @@ function EditTeamDialog({ team, initialContactInfo, onClose, onSaved }: { team: 
     const { error } = await supabase.from("teams").update({
       name: name.trim().slice(0, 100),
       description: description.trim().slice(0, 500) || null,
-      logo_url: logoUrl.trim().slice(0, 500) || null,
+      logo_url: logoUrl.trim().slice(0, 2000) || null,
       home_ground: homeGround.trim().slice(0, 200) || null,
       team_colors: teamColors.trim().slice(0, 100) || null,
     }).eq("id", team.id);
@@ -408,7 +412,7 @@ function EditTeamDialog({ team, initialContactInfo, onClose, onSaved }: { team: 
         <form onSubmit={save} className="space-y-2">
           <div><Label className="text-xs">Team Name</Label><Input required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><Label className="text-xs">Description</Label><Input maxLength={500} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <div><Label className="text-xs">Logo URL</Label><Input maxLength={500} value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} /></div>
+          <ImageUploader value={logoUrl} onChange={setLogoUrl} folder="team-logos" label="Team logo" shape="circle" />
           <div><Label className="text-xs">Home Ground</Label><Input maxLength={200} value={homeGround} onChange={(e) => setHomeGround(e.target.value)} /></div>
           <div><Label className="text-xs">Team Colors</Label><Input maxLength={100} value={teamColors} onChange={(e) => setTeamColors(e.target.value)} placeholder="e.g. Red & White" /></div>
           <div><Label className="text-xs">Contact Info</Label><Input maxLength={200} value={contactInfo} onChange={(e) => setContactInfo(e.target.value)} /></div>
@@ -448,7 +452,7 @@ function EditPlayerDialog({ player, teamId, onClose, onSaved }: { player: any; t
       name: name.trim().slice(0, 100),
       jersey_number: num ? Math.max(0, Math.min(999, Number(num))) : null,
       position: pos.trim().slice(0, 50) || null,
-      photo_url: photo.trim().slice(0, 500) || null,
+      photo_url: photo.trim().slice(0, 2000) || null,
       date_of_birth: dob || null,
       team_id: newTeamId,
     }).eq("id", player.id);
@@ -468,7 +472,7 @@ function EditPlayerDialog({ player, teamId, onClose, onSaved }: { player: any; t
             <div><Label className="text-xs">#</Label><Input type="number" min={0} max={999} value={num} onChange={(e) => setNum(e.target.value)} /></div>
           </div>
           <div><Label className="text-xs">Position</Label><Input maxLength={50} value={pos} onChange={(e) => setPos(e.target.value)} placeholder="GK / DEF / MID / FWD" /></div>
-          <div><Label className="text-xs">Photo URL</Label><Input maxLength={500} value={photo} onChange={(e) => setPhoto(e.target.value)} /></div>
+          <ImageUploader value={photo} onChange={setPhoto} folder="player-photos" label="Player photo" shape="circle" />
           <div><Label className="text-xs">Date of Birth</Label><Input type="date" value={dob} onChange={(e) => setDob(e.target.value)} /></div>
           <div>
             <Label className="text-xs">Team</Label>
