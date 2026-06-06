@@ -526,6 +526,8 @@ export type Database = {
         Args: { _tournament_id: string; _user_id: string }
         Returns: boolean
       }
+      reconcile_live_matches: { Args: never; Returns: undefined }
+      reconcile_match: { Args: { _match_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "platform_owner" | "admin" | "user"
