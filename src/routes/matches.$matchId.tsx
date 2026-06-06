@@ -27,6 +27,10 @@ function MatchView() {
   const { data: match } = useQuery<Match>({
     queryKey: ["match", matchId],
     queryFn: async () => {
+      // Server-side reconciliation: auto-finishes the match if its scheduled
+      // duration + stoppage + grace has elapsed, so runaway timers are impossible
+      // even if no client has been viewing the live page.
+      await supabase.rpc("reconcile_match", { _match_id: matchId });
       const { data, error } = await supabase
         .from("matches")
         .select("*, home_team:teams!matches_home_team_id_fkey(id,name,logo_url), away_team:teams!matches_away_team_id_fkey(id,name,logo_url), tournament:tournaments(id, name, creator_id)")
