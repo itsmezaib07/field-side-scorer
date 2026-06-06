@@ -101,6 +101,21 @@ function TeamDetail() {
   const isOwner = team && user?.id === team.owner_id;
   const canEdit = !!(isPlatformOwner || isOwner || canAdmin);
   const canDelete = canEdit;
+
+  // Private contact info (owner / platform owner only via RLS)
+  const { data: privateContact } = useQuery({
+    queryKey: ["team-contact", teamId, user?.id],
+    enabled: !!user?.id && canEdit,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("team_private_contacts")
+        .select("contact_info")
+        .eq("team_id", teamId)
+        .maybeSingle();
+      return data?.contact_info ?? "";
+    },
+  });
+
   const [adding, setAdding] = useState(false);
   const [editingTeam, setEditingTeam] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<any | null>(null);
@@ -147,11 +162,11 @@ function TeamDetail() {
         <div className="flex-1">
           <h1 className="text-xl font-bold">{team.name}</h1>
           {team.description && <p className="text-sm text-muted-foreground">{team.description}</p>}
-          {(team.home_ground || team.team_colors || team.contact_info) && (
+          {(team.home_ground || team.team_colors || privateContact) && (
             <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
               {team.home_ground && <div>Home ground: {team.home_ground}</div>}
               {team.team_colors && <div>Colors: {team.team_colors}</div>}
-              {team.contact_info && <div>Contact: {team.contact_info}</div>}
+              {privateContact && <div>Contact: {privateContact}</div>}
             </div>
           )}
         </div>
@@ -239,8 +254,13 @@ function TeamDetail() {
       {editingTeam && (
         <EditTeamDialog
           team={team}
+          initialContactInfo={privateContact ?? ""}
           onClose={() => setEditingTeam(false)}
-          onSaved={() => { setEditingTeam(false); qc.invalidateQueries({ queryKey: ["team", teamId] }); }}
+          onSaved={() => {
+            setEditingTeam(false);
+            qc.invalidateQueries({ queryKey: ["team", teamId] });
+            qc.invalidateQueries({ queryKey: ["team-contact", teamId] });
+          }}
         />
       )}
       {editingPlayer && (
@@ -340,13 +360,13 @@ function DeleteTeamDialog({ team, onClose, onDone }: { team: any; onClose: () =>
   );
 }
 
-function EditTeamDialog({ team, onClose, onSaved }: { team: any; onClose: () => void; onSaved: () => void }) {
+function EditTeamDialog({ team, initialContactInfo, onClose, onSaved }: { team: any; initialContactInfo: string; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(team.name ?? "");
   const [description, setDescription] = useState(team.description ?? "");
   const [logoUrl, setLogoUrl] = useState(team.logo_url ?? "");
   const [homeGround, setHomeGround] = useState(team.home_ground ?? "");
   const [teamColors, setTeamColors] = useState(team.team_colors ?? "");
-  const [contactInfo, setContactInfo] = useState(team.contact_info ?? "");
+  const [contactInfo, setContactInfo] = useState(initialContactInfo ?? "");
   const [saving, setSaving] = useState(false);
 
   const save = async (e: React.FormEvent) => {
@@ -359,10 +379,24 @@ function EditTeamDialog({ team, onClose, onSaved }: { team: any; onClose: () => 
       logo_url: logoUrl.trim().slice(0, 500) || null,
       home_ground: homeGround.trim().slice(0, 200) || null,
       team_colors: teamColors.trim().slice(0, 100) || null,
-      contact_info: contactInfo.trim().slice(0, 200) || null,
     }).eq("id", team.id);
+    const trimmedContact = contactInfo.trim().slice(0, 200);
+    let contactErr: any = null;
+    if (trimmedContact) {
+      const { error: e2 } = await supabase
+        .from("team_private_contacts")
+        .upsert({ team_id: team.id, contact_info: trimmedContact, updated_at: new Date().toISOString() });
+      contactErr = e2;
+    } else {
+      const { error: e2 } = await supabase
+        .from("team_private_contacts")
+        .delete()
+        .eq("team_id", team.id);
+      contactErr = e2;
+    }
     setSaving(false);
     if (error) return toast.error(error.message);
+    if (contactErr) return toast.error(contactErr.message);
     toast.success("Changes saved successfully.");
     onSaved();
   };
