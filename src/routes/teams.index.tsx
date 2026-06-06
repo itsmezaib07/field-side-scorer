@@ -20,13 +20,16 @@ function TeamsList() {
   const qc = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
   const { data, isLoading } = useQuery({
-    queryKey: ["teams", showArchived ? "archived" : "active"],
+    queryKey: ["teams", showArchived ? "archived" : "active", user?.id, isPlatformOwner],
+    enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("teams")
         .select("id, name, description, logo_url, owner_id, is_archived, archived_at")
-        .eq("is_archived", showArchived)
-        .order("created_at", { ascending: false });
+        .eq("is_archived", showArchived);
+      // Restrict management view to teams owned by current user (platform owner sees all).
+      if (!isPlatformOwner && user) q = q.eq("owner_id", user.id);
+      const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
