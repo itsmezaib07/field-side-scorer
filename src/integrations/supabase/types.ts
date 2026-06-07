@@ -273,9 +273,11 @@ export type Database = {
       }
       players: {
         Row: {
+          archived_at: string | null
           created_at: string
           date_of_birth: string | null
           id: string
+          is_archived: boolean
           jersey_number: number | null
           last_modified_at: string | null
           last_modified_by: string | null
@@ -285,9 +287,11 @@ export type Database = {
           team_id: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           date_of_birth?: string | null
           id?: string
+          is_archived?: boolean
           jersey_number?: number | null
           last_modified_at?: string | null
           last_modified_by?: string | null
@@ -297,9 +301,11 @@ export type Database = {
           team_id: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           date_of_birth?: string | null
           id?: string
+          is_archived?: boolean
           jersey_number?: number | null
           last_modified_at?: string | null
           last_modified_by?: string | null
