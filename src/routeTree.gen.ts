@@ -17,6 +17,7 @@ import { Route as TournamentsNewRouteImport } from './routes/tournaments.new'
 import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments.$tournamentId'
 import { Route as TeamsNewRouteImport } from './routes/teams.new'
 import { Route as TeamsTeamIdRouteImport } from './routes/teams.$teamId'
+import { Route as MatchesNewRouteImport } from './routes/matches.new'
 import { Route as MatchesMatchIdRouteImport } from './routes/matches.$matchId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -59,6 +60,11 @@ const TeamsTeamIdRoute = TeamsTeamIdRouteImport.update({
   path: '/teams/$teamId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MatchesNewRoute = MatchesNewRouteImport.update({
+  id: '/matches/new',
+  path: '/matches/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MatchesMatchIdRoute = MatchesMatchIdRouteImport.update({
   id: '/matches/$matchId',
   path: '/matches/$matchId',
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
+  '/matches/new': typeof MatchesNewRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
   '/teams/new': typeof TeamsNewRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
+  '/matches/new': typeof MatchesNewRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
   '/teams/new': typeof TeamsNewRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/matches/$matchId': typeof MatchesMatchIdRoute
+  '/matches/new': typeof MatchesNewRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
   '/teams/new': typeof TeamsNewRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/matches/$matchId'
+    | '/matches/new'
     | '/teams/$teamId'
     | '/teams/new'
     | '/tournaments/$tournamentId'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/matches/$matchId'
+    | '/matches/new'
     | '/teams/$teamId'
     | '/teams/new'
     | '/tournaments/$tournamentId'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/matches/$matchId'
+    | '/matches/new'
     | '/teams/$teamId'
     | '/teams/new'
     | '/tournaments/$tournamentId'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   MatchesMatchIdRoute: typeof MatchesMatchIdRoute
+  MatchesNewRoute: typeof MatchesNewRoute
   TeamsTeamIdRoute: typeof TeamsTeamIdRoute
   TeamsNewRoute: typeof TeamsNewRoute
   TournamentsTournamentIdRoute: typeof TournamentsTournamentIdRoute
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeamsTeamIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/matches/new': {
+      id: '/matches/new'
+      path: '/matches/new'
+      fullPath: '/matches/new'
+      preLoaderRoute: typeof MatchesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/matches/$matchId': {
       id: '/matches/$matchId'
       path: '/matches/$matchId'
@@ -219,6 +239,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   MatchesMatchIdRoute: MatchesMatchIdRoute,
+  MatchesNewRoute: MatchesNewRoute,
   TeamsTeamIdRoute: TeamsTeamIdRoute,
   TeamsNewRoute: TeamsNewRoute,
   TournamentsTournamentIdRoute: TournamentsTournamentIdRoute,
@@ -229,3 +250,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
