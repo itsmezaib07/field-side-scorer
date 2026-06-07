@@ -723,6 +723,7 @@ function EventDialog({ kind, match, minute, onClose }: { kind: string | null; ma
         .from("players")
         .select("id, name, jersey_number, team_id")
         .eq("team_id", teamId!)
+        .eq("is_archived", false)
         .order("jersey_number", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data as Player[];
