@@ -25,7 +25,7 @@ function Index() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("matches")
-        .select("id, home_score, away_score, status, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name), tournament:tournaments(name)")
+        .select("id, home_score, away_score, status, competition_name, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name), tournament:tournaments(name)")
         .in("status", ["first_half", "halftime", "second_half", "paused"])
         .order("created_at", { ascending: false })
         .limit(10);
