@@ -81,7 +81,9 @@ function MatchView() {
 
   if (!match) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
-  const isAdmin = isPlatformOwner || user?.id === match.tournament?.creator_id;
+  const isAdmin = isPlatformOwner
+    || user?.id === match.tournament?.creator_id
+    || (!match.tournament_id && user?.id === (match as any).creator_id);
   const isScorer = isAdmin || (scorers ?? []).some((s) => s.user_id === user?.id);
   const elapsed = getElapsedSeconds(match);
   void tick;
@@ -89,7 +91,10 @@ function MatchView() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/90 text-primary-foreground p-4">
-        <div className="text-center text-xs uppercase opacity-80">{match.tournament?.name}</div>
+        <div className="text-center text-xs uppercase opacity-80">
+          {match.tournament?.name ?? (match as any).competition_name ?? "Friendly"}
+          {(match as any).location ? ` · ${(match as any).location}` : ""}
+        </div>
         <div className="grid grid-cols-3 items-center mt-2">
           <TeamBlock team={match.home_team} />
           <div className="text-center">
@@ -233,7 +238,11 @@ function AdminPanel({ match }: { match: any }) {
     if (error) return toast.error(error.message);
     toast.success("Match deleted");
     setConfirmOpen(false);
-    navigate({ to: "/tournaments/$tournamentId", params: { tournamentId: match.tournament_id } });
+    if (match.tournament_id) {
+      navigate({ to: "/tournaments/$tournamentId", params: { tournamentId: match.tournament_id } });
+    } else {
+      navigate({ to: "/" });
+    }
   };
 
   return (
