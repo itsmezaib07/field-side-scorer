@@ -48,7 +48,16 @@ function TeamsList() {
   const hardDelete = async (id: string) => {
     if (!confirm("Permanently delete this team? This cannot be undone.")) return;
     const { error } = await supabase.from("teams").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      const { error: e2 } = await supabase
+        .from("teams")
+        .update({ is_archived: true, archived_at: new Date().toISOString() })
+        .eq("id", id);
+      if (e2) return toast.error("Could not remove this team. Please try again.");
+      toast.success("This team has historical match data and cannot be permanently deleted. It remains archived.");
+      qc.invalidateQueries({ queryKey: ["teams"] });
+      return;
+    }
     toast.success("Team deleted.");
     qc.invalidateQueries({ queryKey: ["teams"] });
   };
