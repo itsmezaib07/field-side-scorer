@@ -402,11 +402,35 @@ function DeleteTeamDialog({ team, onClose, onDone }: { team: any; onClose: () =>
   };
 
   const hardDelete = async () => {
+    if (hasHistory) {
+      if (!confirm("This team has historical match data and cannot be permanently deleted. Archive it instead?")) return;
+      setWorking(true);
+      const { error } = await supabase
+        .from("teams")
+        .update({ is_archived: true, archived_at: new Date().toISOString() })
+        .eq("id", team.id);
+      setWorking(false);
+      if (error) return toast.error("Could not archive this team. Please try again.");
+      toast.success("This team has historical match data and cannot be permanently deleted. It has been archived instead.");
+      onDone();
+      return;
+    }
     if (!confirm("This permanently removes the team. Continue?")) return;
     setWorking(true);
     const { error } = await supabase.from("teams").delete().eq("id", team.id);
+    if (error) {
+      // Fallback: archive on FK conflict
+      const { error: e2 } = await supabase
+        .from("teams")
+        .update({ is_archived: true, archived_at: new Date().toISOString() })
+        .eq("id", team.id);
+      setWorking(false);
+      if (e2) return toast.error("Could not remove this team. Please try again.");
+      toast.success("This team has historical match data and cannot be permanently deleted. It has been archived instead.");
+      onDone();
+      return;
+    }
     setWorking(false);
-    if (error) return toast.error(error.message);
     toast.success("Team deleted.");
     onDone();
   };
