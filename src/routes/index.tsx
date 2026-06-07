@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, Users, Flag, Plus } from "lucide-react";
+import { Trophy, Users, Flag, Plus, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -51,7 +51,7 @@ function Index() {
       </section>
 
       {user && (
-        <section className="grid grid-cols-3 gap-2">
+        <section className="grid grid-cols-4 gap-2">
           <Link to="/teams" className="rounded-xl border bg-card p-3 text-center">
             <Users className="h-5 w-5 mx-auto text-primary" />
             <div className="mt-1 text-xs font-medium">Teams</div>
@@ -59,6 +59,10 @@ function Index() {
           <Link to="/tournaments" className="rounded-xl border bg-card p-3 text-center">
             <Trophy className="h-5 w-5 mx-auto text-primary" />
             <div className="mt-1 text-xs font-medium">Tournaments</div>
+          </Link>
+          <Link to="/matches/new" className="rounded-xl border bg-card p-3 text-center">
+            <Zap className="h-5 w-5 mx-auto text-accent" />
+            <div className="mt-1 text-xs font-medium">Friendly</div>
           </Link>
           <Link to="/tournaments/new" className="rounded-xl border bg-card p-3 text-center">
             <Plus className="h-5 w-5 mx-auto text-primary" />
@@ -76,7 +80,7 @@ function Index() {
           <div className="space-y-2">
             {liveMatches.map((m: any) => (
               <Link key={m.id} to="/matches/$matchId" params={{ matchId: m.id }} className="block rounded-xl border bg-card p-3">
-                <div className="text-xs text-muted-foreground">{m.tournament?.name}</div>
+                <div className="text-xs text-muted-foreground">{m.tournament?.name ?? m.competition_name ?? "Friendly"}</div>
                 <div className="flex items-center justify-between mt-1">
                   <span className="font-medium">{m.home_team?.name}</span>
                   <span className="text-lg font-bold tabular-nums">{m.home_score} - {m.away_score}</span>
