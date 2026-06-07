@@ -180,7 +180,9 @@ export type Database = {
           actual_started_at: string | null
           away_score: number
           away_team_id: string
+          competition_name: string | null
           created_at: string
+          creator_id: string | null
           current_half: number
           extra_time_minutes_per_half: number
           first_half_actual_seconds: number | null
@@ -188,6 +190,7 @@ export type Database = {
           home_score: number
           home_team_id: string
           id: string
+          location: string | null
           minutes_per_half: number
           number_of_halves: number
           scheduled_at: string | null
@@ -197,14 +200,16 @@ export type Database = {
           started_by_user_id: string | null
           status: Database["public"]["Enums"]["match_status"]
           timer_started_at: string | null
-          tournament_id: string
+          tournament_id: string | null
         }
         Insert: {
           accumulated_seconds?: number
           actual_started_at?: string | null
           away_score?: number
           away_team_id: string
+          competition_name?: string | null
           created_at?: string
+          creator_id?: string | null
           current_half?: number
           extra_time_minutes_per_half?: number
           first_half_actual_seconds?: number | null
@@ -212,6 +217,7 @@ export type Database = {
           home_score?: number
           home_team_id: string
           id?: string
+          location?: string | null
           minutes_per_half?: number
           number_of_halves?: number
           scheduled_at?: string | null
@@ -221,14 +227,16 @@ export type Database = {
           started_by_user_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           timer_started_at?: string | null
-          tournament_id: string
+          tournament_id?: string | null
         }
         Update: {
           accumulated_seconds?: number
           actual_started_at?: string | null
           away_score?: number
           away_team_id?: string
+          competition_name?: string | null
           created_at?: string
+          creator_id?: string | null
           current_half?: number
           extra_time_minutes_per_half?: number
           first_half_actual_seconds?: number | null
@@ -236,6 +244,7 @@ export type Database = {
           home_score?: number
           home_team_id?: string
           id?: string
+          location?: string | null
           minutes_per_half?: number
           number_of_halves?: number
           scheduled_at?: string | null
@@ -245,7 +254,7 @@ export type Database = {
           started_by_user_id?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           timer_started_at?: string | null
-          tournament_id?: string
+          tournament_id?: string | null
         }
         Relationships: [
           {
