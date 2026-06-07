@@ -238,7 +238,11 @@ function AdminPanel({ match }: { match: any }) {
     if (error) return toast.error(error.message);
     toast.success("Match deleted");
     setConfirmOpen(false);
-    navigate({ to: "/tournaments/$tournamentId", params: { tournamentId: match.tournament_id } });
+    if (match.tournament_id) {
+      navigate({ to: "/tournaments/$tournamentId", params: { tournamentId: match.tournament_id } });
+    } else {
+      navigate({ to: "/" });
+    }
   };
 
   return (
