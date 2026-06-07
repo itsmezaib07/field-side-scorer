@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Shield, Plus, Trash2, Pencil, Archive } from "lucide-react";
+import { Shield, Plus, Trash2, Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUploader } from "@/components/ImageUploader";
 
@@ -39,7 +39,22 @@ function TeamDetail() {
         .from("players")
         .select("*")
         .eq("team_id", teamId)
+        .eq("is_archived", false)
         .order("jersey_number", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: archivedPlayers } = useQuery({
+    queryKey: ["players-archived", teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("players")
+        .select("*")
+        .eq("team_id", teamId)
+        .eq("is_archived", true)
+        .order("name", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -142,10 +157,51 @@ function TeamDetail() {
   };
 
   const removePlayer = async (id: string) => {
-    if (!confirm("Remove this player?")) return;
-    const { error } = await supabase.from("players").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    // Check if player has any historical match data
+    const [{ count: evCount }, { count: assistCount }, { count: cardCount }, { count: subCount }, { count: sqCount }] = await Promise.all([
+      supabase.from("match_events").select("id", { count: "exact", head: true }).eq("player_id", id),
+      supabase.from("match_events").select("id", { count: "exact", head: true }).eq("assist_player_id", id),
+      supabase.from("match_events").select("id", { count: "exact", head: true }).eq("card_player_id", id),
+      supabase.from("match_events").select("id", { count: "exact", head: true }).eq("sub_in_player_id", id),
+      supabase.from("match_squads").select("player_id", { count: "exact", head: true }).eq("player_id", id),
+    ]);
+    const hasHistory = (evCount ?? 0) + (assistCount ?? 0) + (cardCount ?? 0) + (subCount ?? 0) + (sqCount ?? 0) > 0;
+    if (hasHistory) {
+      if (!confirm("This player has match history and cannot be permanently deleted. Archive instead?")) return;
+      const { error } = await supabase
+        .from("players")
+        .update({ is_archived: true, archived_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) return toast.error("Could not archive this player. Please try again.");
+      toast.success("Player archived. Historical records are preserved.");
+    } else {
+      if (!confirm("Remove this player permanently?")) return;
+      const { error } = await supabase.from("players").delete().eq("id", id);
+      if (error) {
+        // Fallback: archive on FK conflict
+        const { error: e2 } = await supabase
+          .from("players")
+          .update({ is_archived: true, archived_at: new Date().toISOString() })
+          .eq("id", id);
+        if (e2) return toast.error("Could not remove this player. Please try again.");
+        toast.success("Player archived to preserve historical records.");
+      } else {
+        toast.success("Player deleted.");
+      }
+    }
     qc.invalidateQueries({ queryKey: ["players", teamId] });
+    qc.invalidateQueries({ queryKey: ["players-archived", teamId] });
+  };
+
+  const restorePlayer = async (id: string) => {
+    const { error } = await supabase
+      .from("players")
+      .update({ is_archived: false, archived_at: null })
+      .eq("id", id);
+    if (error) return toast.error("Could not restore this player. Please try again.");
+    toast.success("Player restored.");
+    qc.invalidateQueries({ queryKey: ["players", teamId] });
+    qc.invalidateQueries({ queryKey: ["players-archived", teamId] });
   };
 
   if (!team) return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -254,6 +310,32 @@ function TeamDetail() {
           );
         })}
       </ul>
+
+      {canEdit && archivedPlayers && archivedPlayers.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-muted-foreground">Archived players ({archivedPlayers.length})</h3>
+          <ul className="space-y-2">
+            {archivedPlayers.map((p) => (
+              <li key={p.id} className="flex items-center gap-3 rounded-xl border border-dashed bg-muted/30 p-3">
+                {p.photo_url ? (
+                  <img src={p.photo_url} alt={p.name} className="h-10 w-10 rounded-full object-cover opacity-60" />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
+                    {p.jersey_number ?? "?"}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{p.name}</div>
+                  <div className="text-xs text-muted-foreground">Archived — historical stats preserved</div>
+                </div>
+                <button onClick={() => restorePlayer(p.id)} title="Restore" className="p-1.5 text-muted-foreground hover:text-primary">
+                  <ArchiveRestore className="h-4 w-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {editingTeam && (
         <EditTeamDialog
