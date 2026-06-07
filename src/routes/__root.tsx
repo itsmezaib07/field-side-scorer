@@ -90,8 +90,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "MatchPad" },
       { name: "twitter:description", content: "Live football scoring and tournament management for grassroots football. Track matches, teams, players, stats, and standings in real time" },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/dabf1e0b-d1d2-45a8-b37e-3867fb48faf0/id-preview-69023920--9a424140-e4be-4525-a9ff-fcbbfd4b622c.lovable.app-1780388826747.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/dabf1e0b-d1d2-45a8-b37e-3867fb48faf0/id-preview-69023920--9a424140-e4be-4525-a9ff-fcbbfd4b622c.lovable.app-1780388826747.png" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/cf543ac7-7ed0-4931-89e1-51d867fa451e" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/cf543ac7-7ed0-4931-89e1-51d867fa451e" },
     ],
     links: [
       {
